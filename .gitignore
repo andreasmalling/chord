@@ -15,3 +15,7 @@ hs_err_pid*
 .idea/
 /out/
 /target/
+/chord.iml
+
+# Mac OSX
+.DS_Store
