@@ -12,14 +12,19 @@ import javax.ws.rs.core.MediaType;
  * Root resource (exposed at "myresource" path)
  */
 @Path(value = "/")
+@Singleton
 public class MyResource
 {
+    private Node n;
 
+    public MyResource() {
+        this.n = new Node();
+    }
 
     @Template(name = "/index.mustache")
     @GET
     public Context getStatus() {
-        return new Context(4);
+        return new Context(n.get());
     }
 
     public static class Context {
