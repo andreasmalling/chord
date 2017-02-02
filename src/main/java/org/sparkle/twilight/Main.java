@@ -3,6 +3,7 @@ package org.sparkle.twilight;
 import org.glassfish.grizzly.http.server.HttpServer;
 import org.glassfish.jersey.grizzly2.httpserver.GrizzlyHttpServerFactory;
 import org.glassfish.jersey.server.ResourceConfig;
+import org.glassfish.jersey.server.mvc.mustache.MustacheMvcFeature;
 
 import java.io.IOException;
 import java.net.URI;
@@ -22,7 +23,11 @@ public class Main {
     public static HttpServer startServer() {
         // create a resource config that scans for JAX-RS resources and providers
         // in org.sparkle.twilight package
-        final ResourceConfig rc = new ResourceConfig().packages("org.sparkle.twilight");
+        final ResourceConfig rc = new ResourceConfig().property(
+                MustacheMvcFeature.TEMPLATE_BASE_PATH, "templates"
+        ).register(
+                MustacheMvcFeature.class
+        ).packages("org.sparkle.twilight");
 
         // create and start a new instance of grizzly http server
         // exposing the Jersey application at BASE_URI
@@ -45,6 +50,7 @@ public class Main {
                 + "%sapplication.wadl\nHit enter to stop it...", BASE_URI));
         for (String s: args)
             System.out.println(s);
+        System.out.println(MustacheMvcFeature.TEMPLATE_BASE_PATH);
         System.in.read();
         server.stop();
     }

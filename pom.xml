@@ -38,6 +38,11 @@
             <version>4.9</version>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>org.glassfish.jersey.ext</groupId>
+            <artifactId>jersey-mvc-mustache</artifactId>
+            <version>${jersey.version}</version>
+        </dependency>
     </dependencies>
 
     <build>
