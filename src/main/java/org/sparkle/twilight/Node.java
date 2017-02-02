@@ -6,13 +6,15 @@ import javax.inject.Singleton;
  * Created by Root on 2/2/2017.
  */
 public class Node {
-    private int value=0;
+    private long id;
 
-    public int get() {
-        value++;
-        return value;
+    public Node(long id) {
+        this.id = id;
     }
 
-    public Node() {
+    public long getID() {
+        return id;
     }
+
+
 }

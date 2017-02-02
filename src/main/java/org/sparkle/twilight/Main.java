@@ -46,6 +46,7 @@ public class Main {
             BASE_URI = "http://localhost:8080/myapp/";
         }
         final HttpServer server = startServer();
+
         System.out.println(String.format("Jersey app started with WADL available at "
                 + "%sapplication.wadl\nHit enter to stop it...", BASE_URI));
         for (String s: args)
