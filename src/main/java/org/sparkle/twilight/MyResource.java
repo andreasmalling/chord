@@ -16,7 +16,7 @@ public class MyResource
     private Node n;
 
     public MyResource() {
-        long id = Integer.decode("0x" + DigestUtils.sha1Hex(Main.BASE_URI).substring(0,6));
+        int id = Integer.decode("0x" + DigestUtils.sha1Hex(Main.BASE_URI).substring(0,2));
         this.n = new Node(id);
     }
 
