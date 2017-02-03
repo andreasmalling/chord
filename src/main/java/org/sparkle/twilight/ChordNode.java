@@ -28,9 +28,8 @@ public interface ChordNode {
      *
      * @param id The id of search
      * @param initiator Address of node asking for key
-     * @return Address of node responsible of key
      */
-    public String lookup(int id, String initiator);
+    public void lookup(int id, String initiator);
 
-
+    public boolean isInNetwork();
 }

@@ -17,6 +17,7 @@ public class Node implements ChordNode {
     private String successor;
     private final String address  = Main.BASE_URI;
     private HttpClient client;
+    private boolean inNetwork = false;
 
     public Node() {
         id = generateID();
@@ -32,35 +33,13 @@ public class Node implements ChordNode {
 
         client = HttpClientBuilder.create().build();
 
-        String url = entryPoint + "/" + "lookup/";
-
-        JSONObject json = new JSONObject();
-        json.put(JSONformat.KEY, id);
-        json.put(JSONformat.ADDRESS, address);
-
-        HttpPost postMsg = new HttpPost(url);
-        try {
-            StringEntity params = new StringEntity(json.toJSONString());
-            postMsg.addHeader("content-type", JSONformat.JSON);
-            postMsg.setEntity(params);
-            HttpResponse response = client.execute(postMsg);
-
-            if (response.getStatusLine().getStatusCode() != 200) {
-                System.out.println("ERROR ERROR; Check Microsoft Parental Controls!!");     //TODO ??
-                throw new IOException();
-            }
-
-        } catch (UnsupportedEncodingException e) {
-            e.printStackTrace();
-        } catch (ClientProtocolException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        performLookup(entryPoint, id, address);
 
         //   Lookup new successor --> Set as successor
         //   Lookup Successor's predecessor --> Set pred's Successor to this node.
     }
+
+
 
     private int generateID( ){
         return Integer.decode("0x" + DigestUtils.sha1Hex(address).substring(0,2));
@@ -83,6 +62,9 @@ public class Node implements ChordNode {
 
     @Override
     public void joinRing (String address) {
+        successor = address;
+        //TODO set succesors predessor to self
+        inNetwork = true;
 
     }
 
@@ -92,10 +74,56 @@ public class Node implements ChordNode {
     }
 
     @Override
-    public String lookup(int key, String initiator) {
-        // Do this node match key?
-        //   Return this node's adress
-        // Else forward to successor
-        return initiator;
+    public void lookup(int key, String initiator) {
+        if (id >= key) {
+            performQueryRepsonse(initiator, key);
+        } else {
+            performLookup(successor, key, initiator);
+        }
+    }
+
+    private void performLookup(String reciever, int id, String address) {
+        String url = reciever + MyResource.LOOKUPPATH;
+
+        JSONObject json = new JSONObject();
+        json.put(JSONformat.KEY, id);
+        json.put(JSONformat.ADDRESS, address);
+        httpRequest(url, json);
+    }
+
+    private void performQueryRepsonse(String receiver, int key) {
+        String url = receiver + MyResource.RECEIVEPATH;
+
+        JSONObject json = new JSONObject();
+        json.put(JSONformat.KEY, key); //the search key is returned to sender in case they are doing multiple queries
+        json.put(JSONformat.ADDRESS, address);
+        httpRequest(url, json);
+
+    }
+
+    private void httpRequest(String url, JSONObject body) {
+        HttpPost postMsg = new HttpPost(url);
+        try {
+            StringEntity params = new StringEntity(body.toJSONString());
+            postMsg.addHeader("content-type", JSONformat.JSON);
+            postMsg.setEntity(params);
+            HttpResponse response = client.execute(postMsg);
+
+            if (response.getStatusLine().getStatusCode() != 200) {
+                System.out.println("ERROR ERROR");     //TODO ??
+                throw new IOException();
+            }
+        } catch (UnsupportedEncodingException e) {
+            e.printStackTrace();
+        } catch (ClientProtocolException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    @Override
+    public boolean isInNetwork() {
+        return inNetwork;
     }
 }

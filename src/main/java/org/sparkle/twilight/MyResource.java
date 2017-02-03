@@ -17,8 +17,10 @@ import javax.ws.rs.core.Response;
  */
 @Path(value = "/")
 @Singleton
-public class MyResource
-{
+public class MyResource {
+    public static final String LOOKUPPATH = "/lookup";
+    public static final String RECEIVEPATH = "/receive";
+
     private Node n;
 
     public MyResource() {
@@ -28,10 +30,10 @@ public class MyResource
     @Template(name = "/index.mustache")
     @GET
     public Context getStatus() {
-        return new Context(n.getID() + "");
+        return new Context(n.getID() + "", n.getSuccessor() + "");
     }
 
-    @Path("/lookup")
+    @Path(LOOKUPPATH)
     @POST
     public Response lookup( String request ) {
         JSONParser parser = new JSONParser();
@@ -57,7 +59,7 @@ public class MyResource
     }
      */
 
-    @Path("/joinresponse")
+    @Path(RECEIVEPATH) //join if not entering network, otherwise receive address for key lookup
     @POST
     @Consumes("application/json")
     public Response response(String request){
@@ -66,7 +68,11 @@ public class MyResource
             JSONObject jreqeust = (JSONObject) parser.parse(request);
             int key = (int) jreqeust.get(JSONformat.KEY);
             String address = (String) jreqeust.get(JSONformat.ADDRESS);
-            n.joinRing(address);
+            if (n.isInNetwork()) {
+                //TODO key lookup call
+            } else {
+                n.joinRing(address);
+            }
 
         } catch (ParseException e) {
             e.printStackTrace();
@@ -78,10 +84,12 @@ public class MyResource
 
 
     public static class Context {
-        public String value;
+        public String id;
+        public String succ;
 
-        public Context(final String value) {
-            this.value = value;
+        public Context(final String id, final String succ) {
+            this.id = id;
+            this.succ = succ;
         }
     }
 }
