@@ -16,7 +16,11 @@ public interface ChordNode {
      */
     public void setSuccessor(String successor);
 
-    public void joinRing();
+    /**
+     *
+     * @param address of to be Successor
+     */
+    public void joinRing(String address);
 
     public void leaveRing();
 
