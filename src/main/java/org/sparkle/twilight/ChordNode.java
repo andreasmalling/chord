@@ -11,10 +11,22 @@ public interface ChordNode {
     public String getSuccessor();
 
     /**
+     * Return address of Predecessor
+     * @return address of Predecessor
+     */
+    public String getPredecessor();
+
+    /**
      * Set nodes Successor address
      * @param successor address of Successor
      */
     public void setSuccessor(String successor);
+
+    /**
+     * Set nodes Predecessor address
+     * @param predecessor address of Successor
+     */
+    public void setPredecessor(String predecessor);
 
     /**
      *
