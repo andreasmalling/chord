@@ -16,6 +16,12 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.BlockingDeque;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.LinkedBlockingQueue;
 
 public class Node implements ChordNode {
     public final String address = Main.BASE_URI;
@@ -25,10 +31,10 @@ public class Node implements ChordNode {
     private HttpClient client;
     private boolean inNetwork = false;
     private int predecessorId;
+    private List<String> addresses;
 
     public Node() {
-        id = generateHash(address);
-        client = HttpClientBuilder.create().build();
+        initializeNode();
         // Create Initial Ring
         setSuccessor(address);
         setPredecessor(address);
@@ -36,12 +42,17 @@ public class Node implements ChordNode {
     }
 
     public Node(String entryPoint) {
-        id = generateHash(address);
-        client = HttpClientBuilder.create().build();
+        initializeNode();
         // Join Ring
         performLookup(entryPoint, id, address);
         //   Lookup new successor --> Set as successor
         //   Lookup Successor's predecessor --> Set pred's Successor to this node.
+    }
+
+    private void initializeNode() {
+        id = generateHash(address);
+        client = HttpClientBuilder.create().build();
+        addresses = new CopyOnWriteArrayList();
     }
 
     private int generateHash(String address) {
@@ -190,5 +201,9 @@ public class Node implements ChordNode {
     @Override
     public boolean isInNetwork() {
         return inNetwork;
+    }
+
+    public List<String> getAddresses() {
+        return addresses;
     }
 }

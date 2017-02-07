@@ -9,6 +9,7 @@ import org.json.simple.parser.ParseException;
 import javax.ws.rs.*;
 import javax.ws.rs.core.Response;
 import java.net.URI;
+import java.util.List;
 
 /**
  * Root resource
@@ -36,7 +37,7 @@ public class ChordResource {
     @Template(name = "/index.mustache")
     @GET
     public Context getStatus() {
-        return new Context(n.getID() + "", n.getSuccessor(), n.getPredecessor());
+        return new Context(n);
     }
 
     @Path(PREDECESSORPATH)
@@ -144,8 +145,10 @@ public class ChordResource {
             int key = Integer.parseInt(jreqeust.get(JSONFormat.KEY).toString());
             String address = jreqeust.get(JSONFormat.ADDRESS).toString();
             if (n.isInNetwork()) {
-                System.out.println("key: " + key + " address: " + address);
-                //TODO key lookup call
+                if (n.getAddresses().size() > 10) {
+                    n.getAddresses().remove(n.getAddresses().size() - 1);
+                }
+                n.getAddresses().add(0, "The address responsible for key: " + key + " is: " + address);
             } else {
                 Runnable joinThread = () -> n.joinRing(address);
                 new Thread(joinThread).start();
@@ -155,7 +158,6 @@ public class ChordResource {
             e.printStackTrace();
             return Response.status(400).build(); //Code 400: Bad Request due to malformed JSON
         }
-
         return Response.ok().build();
     }
 
@@ -171,11 +173,13 @@ public class ChordResource {
         public String id;
         public String succ;
         public String pred;
+        public List<String> addresses;
 
-        public Context(final String id, final String succ, final String pred) {
-            this.id = id;
-            this.succ = succ;
-            this.pred = pred;
+        public Context(final Node node) {
+            this.id = node.getID() + "";
+            this.succ = node.getSuccessor();
+            this.pred = node.getPredecessor();
+            this.addresses = node.getAddresses();
         }
     }
 }
