@@ -1,6 +1,7 @@
 package org.sparkle.twilight;
 
 import org.glassfish.grizzly.http.server.HttpServer;
+import org.glassfish.hk2.utilities.ServiceLocatorUtilities;
 import org.glassfish.jersey.grizzly2.httpserver.GrizzlyHttpServerFactory;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.glassfish.jersey.server.mvc.mustache.MustacheMvcFeature;
@@ -25,11 +26,10 @@ public class Main {
         // create a resource config that scans for JAX-RS resources and providers
         // in org.sparkle.twilight package
         final ResourceConfig rc = new ResourceConfig().property(
-                MustacheMvcFeature.TEMPLATE_BASE_PATH, "templates"
-        ).register(
-                MustacheMvcFeature.class
-        ).packages("org.sparkle.twilight");
-
+                MustacheMvcFeature.TEMPLATE_BASE_PATH, "templates")
+                .register(MustacheMvcFeature.class)
+                .packages("org.sparkle.twilight")
+                .register(ImmediateFeature.class);
         // create and start a new instance of grizzly http server
         // exposing the Jersey application at BASE_URI
         return GrizzlyHttpServerFactory.createHttpServer(URI.create(BASE_URI), rc);

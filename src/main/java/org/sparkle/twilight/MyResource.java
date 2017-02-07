@@ -1,5 +1,6 @@
 package org.sparkle.twilight;
 
+import org.glassfish.hk2.api.Immediate;
 import org.glassfish.jersey.server.mvc.Template;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
@@ -13,7 +14,7 @@ import javax.ws.rs.core.Response;
  * Root resource (exposed at "myresource" path)
  */
 @Path(value = "/")
-@Singleton
+@Immediate
 public class MyResource {
     public static final String LOOKUPPATH = "lookup";
     public static final String RECEIVEPATH = "receive";
@@ -101,13 +102,10 @@ public class MyResource {
     @POST
     public Response lookup(String request) {
         JSONParser parser = new JSONParser();
-        System.out.println("MyResource: about to lookup");
-        System.out.println("REQUEST: " + request);
         try {
             JSONObject jRequest = (JSONObject) parser.parse(request);
             int key = Integer.parseInt(jRequest.get(JSONformat.KEY).toString());
             String address = jRequest.get(JSONformat.ADDRESS).toString();
-            System.out.println("come here?+");
             Runnable lookupThread = () -> n.lookup(key, address);
             new Thread(lookupThread).start();
         } catch (ParseException e) {

@@ -107,17 +107,13 @@ public class Node implements ChordNode {
     public void lookup(int key, String initiator) {
         if (predecessorId == id) {
             //only one in chord
-            System.out.println("SHIT");
             performQueryRepsonse(initiator, key);
         } else if (id >= key && predecessorId < key) {
-            System.out.println("FIRST. Key: " + key);
             performQueryRepsonse(initiator, key);
         } else if (predecessorId > id && (key <= id || key > predecessorId)) {
-            System.out.println("SECOND. Key: " + key);
             //the node has the lowest id, and the pred has the highest (first and last in ring)
             performQueryRepsonse(initiator, key);
         } else {
-            System.out.println("THIRD. Key: " + key);
             performLookup(successor, key, initiator);
         }
     }
@@ -137,7 +133,6 @@ public class Node implements ChordNode {
         JSONObject json = new JSONObject();
         json.put(JSONformat.KEY, key); //the search key is returned to sender in case they are doing multiple queries
         json.put(JSONformat.ADDRESS, address);
-        System.out.println("JSON " + json);
         httpPostRequest(url, json);
 
     }
@@ -152,7 +147,6 @@ public class Node implements ChordNode {
             if (response.getStatusLine().getStatusCode() != 200) {
                 System.out.println(response.getStatusLine().getStatusCode());
                 System.out.println("ERROR ERROR " + url);     //TODO ??
-                System.out.println("WINRAR STYLE" + body.toJSONString());
                 throw new IOException();
             }
         } catch (UnsupportedEncodingException e) {
