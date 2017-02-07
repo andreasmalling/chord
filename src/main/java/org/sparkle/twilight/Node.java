@@ -21,37 +21,31 @@ public class Node implements ChordNode {
     private int id;
     private String successor;
     private String predecessor;
-    private final String address  = Main.BASE_URI;
+    private final String address = Main.BASE_URI;
     private HttpClient client;
     private boolean inNetwork = false;
+    private int predecessorId;
 
     public Node() {
-        id = generateID();
-
+        id = generateHash(address);
+        client = HttpClientBuilder.create().build();
         // Create Initial Ring
         setSuccessor(address);
         setPredecessor(address);
-
         inNetwork = true;
     }
 
-    public Node( String entryPoint ){
-        id = generateID();
-
-        // Join Ring
-
+    public Node(String entryPoint) {
+        id = generateHash(address);
         client = HttpClientBuilder.create().build();
-
+        // Join Ring
         performLookup(entryPoint, id, address);
-
         //   Lookup new successor --> Set as successor
         //   Lookup Successor's predecessor --> Set pred's Successor to this node.
     }
 
-
-
-    private int generateID( ){
-        return Integer.decode("0x" + DigestUtils.sha1Hex(address).substring(0,2));
+    private int generateHash(String address) {
+        return Integer.decode("0x" + DigestUtils.sha1Hex(address).substring(0, 2));
     }
 
     @Override
@@ -76,28 +70,29 @@ public class Node implements ChordNode {
 
     @Override
     public void setPredecessor(String predecessor) {
+        this.predecessorId = generateHash(predecessor);
         this.predecessor = predecessor;
     }
 
     @Override
-    public void joinRing (String address) {
+    public void joinRing(String address) {
         setSuccessor(address);
         //TODO set succesors predessor to self
-        JSONObject json = httpGetRequest(getSuccessor()+MyResource.PREDECESSORPATH);
-        String predurl = (String)json.get(JSONformat.URL);
+        JSONObject json = httpGetRequest(getSuccessor() + MyResource.PREDECESSORPATH);
+        String predurl = json.get(JSONformat.URL).toString();
         setPredecessor(predurl);
 
         //post to predeccessor of successor
         JSONObject postjson = new JSONObject();
-        postjson.put(JSONformat.TYPE,JSONformat.SUCCESSOR);
-        postjson.put(JSONformat.URL,this.address);
-        httpPostRequest(predurl+MyResource.SUCCESSORPATH,postjson);
+        postjson.put(JSONformat.TYPE, JSONformat.SUCCESSOR);
+        postjson.put(JSONformat.URL, this.address);
+        httpPostRequest(predurl + MyResource.SUCCESSORPATH, postjson);
 
         //post to successor of self
         JSONObject postjson2 = new JSONObject();
-        postjson2.put(JSONformat.TYPE,JSONformat.PREDECESSOR);
-        postjson2.put(JSONformat.URL,this.address);
-        httpPostRequest(getSuccessor()+MyResource.PREDECESSORPATH,postjson2);
+        postjson2.put(JSONformat.TYPE, JSONformat.PREDECESSOR);
+        postjson2.put(JSONformat.URL, this.address);
+        httpPostRequest(getSuccessor() + MyResource.PREDECESSORPATH, postjson2);
 
         inNetwork = true;
 
@@ -110,9 +105,19 @@ public class Node implements ChordNode {
 
     @Override
     public void lookup(int key, String initiator) {
-        if (id >= key) {
+        if (predecessorId == id) {
+            //only one in chord
+            System.out.println("SHIT");
+            performQueryRepsonse(initiator, key);
+        } else if (id >= key && predecessorId < key) {
+            System.out.println("FIRST. Key: " + key);
+            performQueryRepsonse(initiator, key);
+        } else if (predecessorId > id && (key <= id || key > predecessorId)) {
+            System.out.println("SECOND. Key: " + key);
+            //the node has the lowest id, and the pred has the highest (first and last in ring)
             performQueryRepsonse(initiator, key);
         } else {
+            System.out.println("THIRD. Key: " + key);
             performLookup(successor, key, initiator);
         }
     }
@@ -132,6 +137,7 @@ public class Node implements ChordNode {
         JSONObject json = new JSONObject();
         json.put(JSONformat.KEY, key); //the search key is returned to sender in case they are doing multiple queries
         json.put(JSONformat.ADDRESS, address);
+        System.out.println("JSON " + json);
         httpPostRequest(url, json);
 
     }
@@ -143,9 +149,10 @@ public class Node implements ChordNode {
             postMsg.addHeader("content-type", JSONformat.JSON);
             postMsg.setEntity(params);
             HttpResponse response = client.execute(postMsg);
-
             if (response.getStatusLine().getStatusCode() != 200) {
-                System.out.println("ERROR ERROR");     //TODO ??
+                System.out.println(response.getStatusLine().getStatusCode());
+                System.out.println("ERROR ERROR " + url);     //TODO ??
+                System.out.println("WINRAR STYLE" + body.toJSONString());
                 throw new IOException();
             }
         } catch (UnsupportedEncodingException e) {
@@ -157,7 +164,7 @@ public class Node implements ChordNode {
         }
     }
 
-    private JSONObject httpGetRequest(String url){
+    private JSONObject httpGetRequest(String url) {
         HttpGet getMsg = new HttpGet(url);
         try {
             HttpResponse response = client.execute(getMsg);
@@ -166,12 +173,12 @@ public class Node implements ChordNode {
                 throw new IOException();
             }
             BufferedReader reader = new BufferedReader(
-                                        new InputStreamReader(
-                                            response.getEntity().getContent()));
+                    new InputStreamReader(
+                            response.getEntity().getContent()));
             String jsonstring = "";
             String line;
-            while ((line = reader.readLine()) != null){
-                jsonstring+=line;
+            while ((line = reader.readLine()) != null) {
+                jsonstring += line;
             }
             JSONParser parser = new JSONParser();
             JSONObject json = (JSONObject) parser.parse(jsonstring);

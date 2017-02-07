@@ -15,6 +15,7 @@ import java.net.URI;
 public class Main {
     // Base URI the Grizzly HTTP server will listen on
     public static String BASE_URI;
+    public static String ENTRY_POINT;
 
     /**
      * Starts Grizzly HTTP server exposing JAX-RS resources defined in this application.
@@ -40,9 +41,15 @@ public class Main {
      * @throws IOException
      */
     public static void main(String[] args) throws IOException {
-        if (args.length == 2) {
-            BASE_URI = "http://" + args[0] + ":" + args[1] + "/myapp/";
+        if (args.length == 1) {
+            //Create chord ring at args 0
+            BASE_URI = "http://localhost:" + args[0] + "/myapp/";
+        } else if (args.length == 2){
+            //Join chord ring at args 1
+            BASE_URI = "http://localhost:" + args[0] + "/myapp/";
+            ENTRY_POINT = "http://localhost:" + args[1] + "/myapp/";
         } else {
+            //Create chord ring at port 8080
             BASE_URI = "http://localhost:8080/myapp/";
         }
         final HttpServer server = startServer();
@@ -51,7 +58,6 @@ public class Main {
                 + "%sapplication.wadl\nHit enter to stop it...", BASE_URI));
         for (String s: args)
             System.out.println(s);
-        System.out.println(MustacheMvcFeature.TEMPLATE_BASE_PATH);
         System.in.read();
         server.stop();
     }

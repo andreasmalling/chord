@@ -1,6 +1,5 @@
 package org.sparkle.twilight;
 
-import org.apache.commons.codec.digest.DigestUtils;
 import org.glassfish.jersey.server.mvc.Template;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
@@ -8,8 +7,6 @@ import org.json.simple.parser.ParseException;
 
 import javax.inject.Singleton;
 import javax.ws.rs.*;
-import javax.ws.rs.core.Context;
-import javax.ws.rs.core.Request;
 import javax.ws.rs.core.Response;
 
 /**
@@ -18,28 +15,32 @@ import javax.ws.rs.core.Response;
 @Path(value = "/")
 @Singleton
 public class MyResource {
-    public static final String LOOKUPPATH = "/lookup";
-    public static final String RECEIVEPATH = "/receive";
-    public static final String PREDECESSORPATH = "/predecessor";
-    public static final String SUCCESSORPATH = "/successor";
+    public static final String LOOKUPPATH = "lookup";
+    public static final String RECEIVEPATH = "receive";
+    public static final String PREDECESSORPATH = "predecessor";
+    public static final String SUCCESSORPATH = "successor";
 
     private Node n;
     private final JSONParser parser = new JSONParser();
 
     public MyResource() {
-        this.n = new Node();
+        if (Main.ENTRY_POINT == null) {
+            this.n = new Node();
+        } else {
+            this.n = new Node(Main.ENTRY_POINT);
+        }
     }
 
     @Template(name = "/index.mustache")
     @GET
     public Context getStatus() {
-        return new Context(n.getID() + "", n.getSuccessor() + "");
+        return new Context(n.getID() + "", n.getSuccessor(), n.getPredecessor());
     }
 
     @Path(PREDECESSORPATH)
     @GET
     @Produces(JSONformat.JSON)
-    public String getPredecessor(){
+    public String getPredecessor() {
 
         JSONObject json = new JSONObject();
         json.put(JSONformat.TYPE, JSONformat.PREDECESSOR);
@@ -51,13 +52,13 @@ public class MyResource {
     @Path(PREDECESSORPATH)
     @POST
     @Consumes(JSONformat.JSON)
-    public Response setPredecessor(String jsonstring){
+    public Response setPredecessor(String jsonstring) {
 
-        JSONObject jreqeust = null;
+        JSONObject jreqeust;
         try {
             jreqeust = (JSONObject) parser.parse(jsonstring);
-            String type = (String) jreqeust.get(JSONformat.TYPE);
-            String url = (String) jreqeust.get(JSONformat.URL);
+            String type = jreqeust.get(JSONformat.TYPE).toString();
+            String url = jreqeust.get(JSONformat.URL).toString();
             n.setPredecessor(url);
         } catch (ParseException e) {
             e.printStackTrace();
@@ -69,7 +70,7 @@ public class MyResource {
     @Path(SUCCESSORPATH)
     @GET
     @Produces(JSONformat.JSON)
-    public String getSuccessor(){
+    public String getSuccessor() {
 
         JSONObject json = new JSONObject();
         json.put(JSONformat.TYPE, JSONformat.SUCCESSOR);
@@ -81,13 +82,13 @@ public class MyResource {
     @Path(SUCCESSORPATH)
     @POST
     @Consumes(JSONformat.JSON)
-    public Response setSuccessor(String jsonstring){
+    public Response setSuccessor(String jsonstring) {
 
-        JSONObject jreqeust = null;
+        JSONObject jreqeust;
         try {
             jreqeust = (JSONObject) parser.parse(jsonstring);
-            String type = (String) jreqeust.get(JSONformat.TYPE);
-            String url = (String) jreqeust.get(JSONformat.URL);
+            String type = jreqeust.get(JSONformat.TYPE).toString();
+            String url = jreqeust.get(JSONformat.URL).toString();
             n.setSuccessor(url);
         } catch (ParseException e) {
             e.printStackTrace();
@@ -98,15 +99,17 @@ public class MyResource {
 
     @Path(LOOKUPPATH)
     @POST
-    public Response lookup( String request ) {
+    public Response lookup(String request) {
         JSONParser parser = new JSONParser();
+        System.out.println("MyResource: about to lookup");
+        System.out.println("REQUEST: " + request);
         try {
-            JSONObject jreqeust = (JSONObject) parser.parse(request);
-            int key = (int) jreqeust.get(JSONformat.KEY);
-            String address = (String) jreqeust.get(JSONformat.ADDRESS);
-
-            n.lookup(key, address);
-
+            JSONObject jRequest = (JSONObject) parser.parse(request);
+            int key = Integer.parseInt(jRequest.get(JSONformat.KEY).toString());
+            String address = jRequest.get(JSONformat.ADDRESS).toString();
+            System.out.println("come here?+");
+            Runnable lookupThread = () -> n.lookup(key, address);
+            new Thread(lookupThread).start();
         } catch (ParseException e) {
             e.printStackTrace();
             return Response.status(400).build(); //Code 400: Bad Request due to malformed JSON
@@ -125,16 +128,17 @@ public class MyResource {
     @Path(RECEIVEPATH) //join if not entering network, otherwise receive address for key lookup
     @POST
     @Consumes(JSONformat.JSON)
-    public Response response(String request){
+    public Response response(String request) {
         JSONParser parser = new JSONParser();
         try {
             JSONObject jreqeust = (JSONObject) parser.parse(request);
-            int key = (int) jreqeust.get(JSONformat.KEY);
-            String address = (String) jreqeust.get(JSONformat.ADDRESS);
+            int key = Integer.parseInt(jreqeust.get(JSONformat.KEY).toString());
+            String address = jreqeust.get(JSONformat.ADDRESS).toString();
             if (n.isInNetwork()) {
                 //TODO key lookup call
             } else {
-                n.joinRing(address);
+                Runnable joinThread = () -> n.joinRing(address);
+                new Thread(joinThread).start();
             }
 
         } catch (ParseException e) {
@@ -149,10 +153,12 @@ public class MyResource {
     public static class Context {
         public String id;
         public String succ;
+        public String pred;
 
-        public Context(final String id, final String succ) {
+        public Context(final String id, final String succ, final String pred) {
             this.id = id;
             this.succ = succ;
+            this.pred = pred;
         }
     }
 }
