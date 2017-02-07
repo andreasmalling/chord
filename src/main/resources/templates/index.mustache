@@ -9,6 +9,14 @@
         ID: {{id}} <br/>
         SUCCESSOR: <a href="{{succ}}"> {{succ}} </a> <br/>
         PREDECESSOR: <a href="{{pred}}"> {{pred}} </a> <br/>
-        <img src="http://mylittlepony.hasbro.com/images/spring2016/ponies/char_twilightsparkle.png"/>
+        <iframe width="0" height="0" border="0" name="nothing" id="nothing" style="display: none"></iframe>
+        <form action="/lookup" method="post" target="nothing">
+            <input type="number" name="key" placeholder="Find node with key..." min="0" max="255"/>
+            <input type="submit" value="FIND ID"/>
+        </form>
+        <form action="/leave" method="post">
+            <input type="submit" value="LEAVE"/>
+        </form>
+        <img src="http://mylittlepony.hasbro.com/images/spring2016/ponies/char_twilightsparkle.png" width="293"/>
     </body>
 </html>

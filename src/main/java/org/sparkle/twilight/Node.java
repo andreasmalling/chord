@@ -18,10 +18,10 @@ import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
 
 public class Node implements ChordNode {
+    public final String address = Main.BASE_URI;
     private int id;
     private String successor;
     private String predecessor;
-    private final String address = Main.BASE_URI;
     private HttpClient client;
     private boolean inNetwork = false;
     private int predecessorId;
@@ -77,30 +77,32 @@ public class Node implements ChordNode {
     @Override
     public void joinRing(String address) {
         setSuccessor(address);
-        //TODO set succesors predessor to self
-        JSONObject json = httpGetRequest(getSuccessor() + MyResource.PREDECESSORPATH);
-        String predurl = json.get(JSONformat.URL).toString();
+        JSONObject json = httpGetRequest(getSuccessor() + ChordResource.PREDECESSORPATH);
+        String predurl = json.get(JSONFormat.VALUE).toString();
         setPredecessor(predurl);
-
-        //post to predeccessor of successor
-        JSONObject postjson = new JSONObject();
-        postjson.put(JSONformat.TYPE, JSONformat.SUCCESSOR);
-        postjson.put(JSONformat.URL, this.address);
-        httpPostRequest(predurl + MyResource.SUCCESSORPATH, postjson);
-
-        //post to successor of self
-        JSONObject postjson2 = new JSONObject();
-        postjson2.put(JSONformat.TYPE, JSONformat.PREDECESSOR);
-        postjson2.put(JSONformat.URL, this.address);
-        httpPostRequest(getSuccessor() + MyResource.PREDECESSORPATH, postjson2);
+        //update pred.succ
+        updateNeighbor(JSONFormat.SUCCESSOR, this.address, predecessor + ChordResource.SUCCESSORPATH);
+        //update succ.pred
+        updateNeighbor(JSONFormat.PREDECESSOR, this.address, successor + ChordResource.PREDECESSORPATH);
 
         inNetwork = true;
+    }
 
+    private void updateNeighbor(String type,  String value, String address) {
+        JSONObject postjson = new JSONObject();
+        postjson.put(JSONFormat.TYPE, type);
+        postjson.put(JSONFormat.VALUE, value);
+        httpPostRequest(address, postjson);
     }
 
     @Override
     public void leaveRing() {
         // Find predecessor and set it's Successor to this node's Successor
+        updateNeighbor(JSONFormat.SUCCESSOR, successor, predecessor + ChordResource.SUCCESSORPATH);
+        // and set pred of succ to this node's pred
+        updateNeighbor(JSONFormat.PREDECESSOR, predecessor, successor + ChordResource.PREDECESSORPATH);
+        // KILL NOW
+        Main.server.shutdownNow();
     }
 
     @Override
@@ -118,21 +120,21 @@ public class Node implements ChordNode {
         }
     }
 
-    private void performLookup(String reciever, int id, String address) {
-        String url = reciever + MyResource.LOOKUPPATH;
+    private void performLookup(String receiver, int id, String address) {
+        String url = receiver + ChordResource.LOOKUPPATH;
 
         JSONObject json = new JSONObject();
-        json.put(JSONformat.KEY, id);
-        json.put(JSONformat.ADDRESS, address);
+        json.put(JSONFormat.KEY, id);
+        json.put(JSONFormat.ADDRESS, address);
         httpPostRequest(url, json);
     }
 
     private void performQueryRepsonse(String receiver, int key) {
-        String url = receiver + MyResource.RECEIVEPATH;
+        String url = receiver + ChordResource.RECEIVEPATH;
 
         JSONObject json = new JSONObject();
-        json.put(JSONformat.KEY, key); //the search key is returned to sender in case they are doing multiple queries
-        json.put(JSONformat.ADDRESS, address);
+        json.put(JSONFormat.KEY, key); //the search key is returned to sender in case they are doing multiple queries
+        json.put(JSONFormat.ADDRESS, address);
         httpPostRequest(url, json);
 
     }
@@ -141,7 +143,7 @@ public class Node implements ChordNode {
         HttpPost postMsg = new HttpPost(url);
         try {
             StringEntity params = new StringEntity(body.toJSONString());
-            postMsg.addHeader("content-type", JSONformat.JSON);
+            postMsg.addHeader("content-type", JSONFormat.JSON);
             postMsg.setEntity(params);
             HttpResponse response = client.execute(postMsg);
             if (response.getStatusLine().getStatusCode() != 200) {

@@ -6,25 +6,26 @@ import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 
-import javax.inject.Singleton;
 import javax.ws.rs.*;
 import javax.ws.rs.core.Response;
+import java.net.URI;
 
 /**
- * Root resource (exposed at "myresource" path)
+ * Root resource
  */
 @Path(value = "/")
 @Immediate
-public class MyResource {
+public class ChordResource {
     public static final String LOOKUPPATH = "lookup";
     public static final String RECEIVEPATH = "receive";
+    public static final String LEAVEPATH = "leave";
     public static final String PREDECESSORPATH = "predecessor";
     public static final String SUCCESSORPATH = "successor";
 
     private Node n;
     private final JSONParser parser = new JSONParser();
 
-    public MyResource() {
+    public ChordResource() {
         if (Main.ENTRY_POINT == null) {
             this.n = new Node();
         } else {
@@ -40,26 +41,26 @@ public class MyResource {
 
     @Path(PREDECESSORPATH)
     @GET
-    @Produces(JSONformat.JSON)
+    @Produces(JSONFormat.JSON)
     public String getPredecessor() {
 
         JSONObject json = new JSONObject();
-        json.put(JSONformat.TYPE, JSONformat.PREDECESSOR);
-        json.put(JSONformat.URL, n.getPredecessor());
+        json.put(JSONFormat.TYPE, JSONFormat.PREDECESSOR);
+        json.put(JSONFormat.VALUE, n.getPredecessor());
 
         return json.toJSONString();
     }
 
     @Path(PREDECESSORPATH)
     @POST
-    @Consumes(JSONformat.JSON)
+    @Consumes(JSONFormat.JSON)
     public Response setPredecessor(String jsonstring) {
 
         JSONObject jreqeust;
         try {
             jreqeust = (JSONObject) parser.parse(jsonstring);
-            String type = jreqeust.get(JSONformat.TYPE).toString();
-            String url = jreqeust.get(JSONformat.URL).toString();
+            String type = jreqeust.get(JSONFormat.TYPE).toString();
+            String url = jreqeust.get(JSONFormat.VALUE).toString();
             n.setPredecessor(url);
         } catch (ParseException e) {
             e.printStackTrace();
@@ -70,26 +71,26 @@ public class MyResource {
 
     @Path(SUCCESSORPATH)
     @GET
-    @Produces(JSONformat.JSON)
+    @Produces(JSONFormat.JSON)
     public String getSuccessor() {
 
         JSONObject json = new JSONObject();
-        json.put(JSONformat.TYPE, JSONformat.SUCCESSOR);
-        json.put(JSONformat.URL, n.getSuccessor());
+        json.put(JSONFormat.TYPE, JSONFormat.SUCCESSOR);
+        json.put(JSONFormat.VALUE, n.getSuccessor());
 
         return json.toJSONString();
     }
 
     @Path(SUCCESSORPATH)
     @POST
-    @Consumes(JSONformat.JSON)
+    @Consumes(JSONFormat.JSON)
     public Response setSuccessor(String jsonstring) {
 
         JSONObject jreqeust;
         try {
             jreqeust = (JSONObject) parser.parse(jsonstring);
-            String type = jreqeust.get(JSONformat.TYPE).toString();
-            String url = jreqeust.get(JSONformat.URL).toString();
+            String type = jreqeust.get(JSONFormat.TYPE).toString();
+            String url = jreqeust.get(JSONFormat.VALUE).toString();
             n.setSuccessor(url);
         } catch (ParseException e) {
             e.printStackTrace();
@@ -100,12 +101,13 @@ public class MyResource {
 
     @Path(LOOKUPPATH)
     @POST
+    @Consumes(JSONFormat.JSON)
     public Response lookup(String request) {
         JSONParser parser = new JSONParser();
         try {
             JSONObject jRequest = (JSONObject) parser.parse(request);
-            int key = Integer.parseInt(jRequest.get(JSONformat.KEY).toString());
-            String address = jRequest.get(JSONformat.ADDRESS).toString();
+            int key = Integer.parseInt(jRequest.get(JSONFormat.KEY).toString());
+            String address = jRequest.get(JSONFormat.ADDRESS).toString();
             Runnable lookupThread = () -> n.lookup(key, address);
             new Thread(lookupThread).start();
         } catch (ParseException e) {
@@ -123,16 +125,26 @@ public class MyResource {
     }
      */
 
-    @Path(RECEIVEPATH) //join if not entering network, otherwise receive address for key lookup
+    @Path(LOOKUPPATH)
     @POST
-    @Consumes(JSONformat.JSON)
+    @Consumes("application/x-www-form-urlencoded")
+    public Response lookupForm(@FormParam("key") String key) {
+        Runnable lookupThread = () -> n.lookup(Integer.parseInt(key), n.address);
+        new Thread(lookupThread).start();
+        return Response.ok().build();
+    }
+
+    @Path(RECEIVEPATH) //join if not in network, otherwise receive address for key lookup
+    @POST
+    @Consumes(JSONFormat.JSON)
     public Response response(String request) {
         JSONParser parser = new JSONParser();
         try {
             JSONObject jreqeust = (JSONObject) parser.parse(request);
-            int key = Integer.parseInt(jreqeust.get(JSONformat.KEY).toString());
-            String address = jreqeust.get(JSONformat.ADDRESS).toString();
+            int key = Integer.parseInt(jreqeust.get(JSONFormat.KEY).toString());
+            String address = jreqeust.get(JSONFormat.ADDRESS).toString();
             if (n.isInNetwork()) {
+                System.out.println("key: " + key + " address: " + address);
                 //TODO key lookup call
             } else {
                 Runnable joinThread = () -> n.joinRing(address);
@@ -147,6 +159,13 @@ public class MyResource {
         return Response.ok().build();
     }
 
+    @Path(LEAVEPATH)
+    @POST
+    public Response leave() {
+        Runnable leaveThread = () -> n.leaveRing();
+        new Thread(leaveThread).start();
+        return Response.seeOther(URI.create(n.getSuccessor())).build();
+    }
 
     public static class Context {
         public String id;
