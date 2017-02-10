@@ -165,7 +165,6 @@ public class Node implements ChordNode {
             for (int j = 0; j < succList.size(); j++) {
                 String succCandidate = succList.get(j);
                 if (address.equals(succCandidate)) {
-                    System.out.println("SELF: address: " + address + " succCandidate: " + succCandidate);
                     //If node is included in successorlist, it does not continue update
                     self = true;
                     break;
@@ -173,11 +172,9 @@ public class Node implements ChordNode {
                 try {
                     JSONObject candidateSuccListJson = httpGetRequest(succCandidate + ChordResource.SUCCESSORLISTPATH);
                     succList = new ArrayList((JSONArray) candidateSuccListJson.get(JSONFormat.VALUE));
-                    System.out.println("Updating list, adding: " + succCandidate);
                     tempSuccList.add(succCandidate);
                     break;
                 } catch (ChordOfflineException e) {
-                    System.out.println("Node not responding moving on");
                     //Node does not respond, so we connect to the next in the successor list
                     continue;
                 }
