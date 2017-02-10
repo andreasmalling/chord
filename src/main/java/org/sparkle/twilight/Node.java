@@ -112,9 +112,14 @@ public class Node implements ChordNode {
         updateNeighbor(JSONFormat.SUCCESSOR, successor, predecessor + ChordResource.SUCCESSORPATH);
         // and set pred of succ to this node's pred
         updateNeighbor(JSONFormat.PREDECESSOR, predecessor, successor + ChordResource.PREDECESSORPATH);
-        // KILL NOW
         Main.server.shutdownNow();
     }
+
+    @Override
+    public void killNode() {
+        System.exit(0);
+    }
+
 
     @Override
     public void lookup(int key, String initiator) {

@@ -21,6 +21,7 @@ public class ChordResource {
     public static final String RECEIVEPATH = "receive";
     public static final String LEAVEPATH = "leave";
     public static final String PREDECESSORPATH = "predecessor";
+    public static final String KILLPATH = "kill";
     public static final String SUCCESSORPATH = "successor";
 
     private Node n;
@@ -167,6 +168,12 @@ public class ChordResource {
         Runnable leaveThread = () -> n.leaveRing();
         new Thread(leaveThread).start();
         return Response.seeOther(URI.create(n.getSuccessor())).build();
+    }
+
+    @Path(KILLPATH)
+    @POST
+    public void kill() {
+        n.killNode();
     }
 
     public static class Context {
