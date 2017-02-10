@@ -23,7 +23,7 @@ public class ChordResource {
     public static final String PREDECESSORPATH = "predecessor";
     public static final String KILLPATH = "kill";
     public static final String SUCCESSORPATH = "successor";
-    public static final String SUCCESSORLISTPATH = "successorlist";
+    public static final String SUCCESSORLISTPATH = "successor/list";
 
     private Node n;
     private final JSONParser parser = new JSONParser();

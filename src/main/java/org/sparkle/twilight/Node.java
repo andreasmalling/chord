@@ -4,8 +4,11 @@ import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.HttpClient;
+import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
+import org.apache.http.conn.ConnectTimeoutException;
+import org.apache.http.conn.HttpHostConnectException;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.json.simple.JSONArray;
@@ -17,6 +20,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
+import java.net.SocketTimeoutException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -32,6 +36,7 @@ public class Node implements ChordNode {
     private List<String> addresses;
 
     private final int successorListLength = 5;
+    private final int connectionTimeout = 3000;
 
     public Node() {
         initializeNode();
@@ -39,6 +44,8 @@ public class Node implements ChordNode {
         setSuccessor(address);
         setPredecessor(address);
         inNetwork = true;
+        Runnable successorListMaintainerThread = () -> maintainSuccessorList();
+        new Thread(successorListMaintainerThread).start();
     }
 
     public Node(String entryPoint) {
@@ -50,10 +57,15 @@ public class Node implements ChordNode {
     }
 
     private void initializeNode() {
+
+        HttpClientBuilder builder = HttpClientBuilder.create();
+        RequestConfig config = RequestConfig.custom().setConnectTimeout(connectionTimeout).setSocketTimeout(connectionTimeout).build();
+        builder.setDefaultRequestConfig(config);
+        client = builder.build();
+
         id = generateHash(address);
-        client = HttpClientBuilder.create().build();
-        addresses = new CopyOnWriteArrayList();
-        successorList = new CopyOnWriteArrayList();
+        addresses = new CopyOnWriteArrayList<>();
+        successorList = new CopyOnWriteArrayList<>();
     }
 
     private int generateHash(String address) {
@@ -87,7 +99,7 @@ public class Node implements ChordNode {
 
     private void succListSizeConstrainer() {
         while (successorList.size() > successorListLength) {
-            successorList.remove(successorListLength - 1);
+            successorList.remove(successorList.size() - 1);
         }
     }
 
@@ -105,24 +117,80 @@ public class Node implements ChordNode {
     @Override
     public void joinRing(String address) {
         setSuccessor(address);
-        JSONObject predJson = httpGetRequest(getSuccessor() + ChordResource.PREDECESSORPATH);
-        String predurl = predJson.get(JSONFormat.VALUE).toString();
-        setPredecessor(predurl);
-        //update pred.succ
-        updateNeighbor(JSONFormat.SUCCESSOR, this.address, getPredecessor() + ChordResource.SUCCESSORPATH);
-        //update succ.pred
-        updateNeighbor(JSONFormat.PREDECESSOR, this.address, getSuccessor() + ChordResource.PREDECESSORPATH);
+        JSONObject predJson = null;
+        try {
+            predJson = httpGetRequest(getSuccessor() + ChordResource.PREDECESSORPATH);
+            String predurl = predJson.get(JSONFormat.VALUE).toString();
+            setPredecessor(predurl);
+            //update pred.succ
+            updateNeighbor(JSONFormat.SUCCESSOR, this.address, getPredecessor() + ChordResource.SUCCESSORPATH);
+            //update succ.pred
+            updateNeighbor(JSONFormat.PREDECESSOR, this.address, getSuccessor() + ChordResource.PREDECESSORPATH);
 
-        updateSuccessorList();
-        inNetwork = true;
+            upsertSuccessorList();
+            inNetwork = true;
+
+            Runnable successorListMaintainerThread = () -> maintainSuccessorList();
+            new Thread(successorListMaintainerThread).start();
+        } catch (ChordOfflineException e) {
+            e.printStackTrace();
+        }
     }
 
-    private void updateSuccessorList() {
+    private void maintainSuccessorList() {
+        while (inNetwork) {
+            double random = Math.random() * 10000;
+            try {
+                System.out.println("I'm sleeping for " + (10000 + random)/1000 + " seconds... Zzz");
+                Thread.sleep((long) (10000 + random));
+                System.out.println("I'm awake! Let's update some successors!");
+                upsertSuccessorList();
+                System.out.println("Done upserting bois, back to sleep.");
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    private void upsertSuccessorList() {
+        //Sorry
         //Add successors successorlist as this node's (after the first successor)
-        //TODO should make list correctly
-        JSONObject succListJson = httpGetRequest(getSuccessor() + ChordResource.SUCCESSORLISTPATH);
-        ArrayList succList = new ArrayList((JSONArray) succListJson.get(JSONFormat.VALUE));
-        bulkInsertSuccessors(succList);
+        CopyOnWriteArrayList<String> tempSuccList = new CopyOnWriteArrayList<>();
+        JSONObject succListJson = null;
+        boolean self = false;
+        try {
+            //TODO if our successor is offline, we need to handle this
+            succListJson = httpGetRequest(getSuccessor() + ChordResource.SUCCESSORLISTPATH);
+            ArrayList<String> succList = new ArrayList((JSONArray) succListJson.get(JSONFormat.VALUE));
+            for (int i = 0; i < successorListLength; i++) {
+                if (self) {
+                    break;
+                }
+                for (int j = 0; j < succList.size(); j++) {
+                    String succCandidate = succList.get(j);
+                    if (address.equals(succCandidate)) {
+                        System.out.println("SELF: address: " + address + " succCandidate: " + succCandidate);
+                        //If node is included in successorlist, it does not continue update
+                        self = true;
+                        break;
+                    }
+                    try {
+                        JSONObject candidateSuccListJson = httpGetRequest(succCandidate + ChordResource.SUCCESSORLISTPATH);
+                        succList = new ArrayList((JSONArray) candidateSuccListJson.get(JSONFormat.VALUE));
+                        System.out.println("Updating list, adding: " + succCandidate);
+                        tempSuccList.add(succCandidate);
+                        break;
+                    } catch (ChordOfflineException e) {
+                        System.out.println("Node not responding moving on");
+                        //Node does not respond, so we connect to the next in the successor list
+                        continue;
+                    }
+                }
+            }
+        } catch (ChordOfflineException e) {
+            e.printStackTrace();
+        }
+        bulkInsertSuccessors(tempSuccList);
     }
 
     private void updateNeighbor(String type, String value, String address) {
@@ -202,7 +270,7 @@ public class Node implements ChordNode {
         }
     }
 
-    private JSONObject httpGetRequest(String url) {
+    private JSONObject httpGetRequest(String url) throws ChordOfflineException {
         HttpGet getMsg = new HttpGet(url);
         try {
             HttpResponse response = client.execute(getMsg);
@@ -221,6 +289,8 @@ public class Node implements ChordNode {
             JSONParser parser = new JSONParser();
             JSONObject json = (JSONObject) parser.parse(jsonstring);
             return json;
+        } catch (HttpHostConnectException | ConnectTimeoutException | SocketTimeoutException e) {
+            throw new ChordOfflineException();
         } catch (IOException e) {
             e.printStackTrace();
         } catch (ParseException e) {
