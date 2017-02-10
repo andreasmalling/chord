@@ -141,7 +141,7 @@ public class Node implements ChordNode {
         while (inNetwork) {
             double random = Math.random() * 10000;
             try {
-                System.out.println("I'm sleeping for " + (10000 + random)/1000 + " seconds... Zzz");
+                System.out.println("I'm sleeping for " + (10000 + random) / 1000 + " seconds... Zzz");
                 Thread.sleep((long) (10000 + random));
                 System.out.println("I'm awake! Let's update some successors!");
                 upsertSuccessorList();
@@ -156,41 +156,39 @@ public class Node implements ChordNode {
         //Sorry
         //Add successors successorlist as this node's (after the first successor)
         CopyOnWriteArrayList<String> tempSuccList = new CopyOnWriteArrayList<>();
-        JSONObject succListJson = null;
         boolean self = false;
-        try {
-            //TODO if our successor is offline, we need to handle this
-            succListJson = httpGetRequest(getSuccessor() + ChordResource.SUCCESSORLISTPATH);
-            ArrayList<String> succList = new ArrayList((JSONArray) succListJson.get(JSONFormat.VALUE));
-            for (int i = 0; i < successorListLength; i++) {
-                if (self) {
+        List<String> succList = successorList;
+        for (int i = 0; i < successorListLength; i++) {
+            if (self) {
+                break;
+            }
+            for (int j = 0; j < succList.size(); j++) {
+                String succCandidate = succList.get(j);
+                if (address.equals(succCandidate)) {
+                    System.out.println("SELF: address: " + address + " succCandidate: " + succCandidate);
+                    //If node is included in successorlist, it does not continue update
+                    self = true;
                     break;
                 }
-                for (int j = 0; j < succList.size(); j++) {
-                    String succCandidate = succList.get(j);
-                    if (address.equals(succCandidate)) {
-                        System.out.println("SELF: address: " + address + " succCandidate: " + succCandidate);
-                        //If node is included in successorlist, it does not continue update
-                        self = true;
-                        break;
-                    }
-                    try {
-                        JSONObject candidateSuccListJson = httpGetRequest(succCandidate + ChordResource.SUCCESSORLISTPATH);
-                        succList = new ArrayList((JSONArray) candidateSuccListJson.get(JSONFormat.VALUE));
-                        System.out.println("Updating list, adding: " + succCandidate);
-                        tempSuccList.add(succCandidate);
-                        break;
-                    } catch (ChordOfflineException e) {
-                        System.out.println("Node not responding moving on");
-                        //Node does not respond, so we connect to the next in the successor list
-                        continue;
-                    }
+                try {
+                    JSONObject candidateSuccListJson = httpGetRequest(succCandidate + ChordResource.SUCCESSORLISTPATH);
+                    succList = new ArrayList((JSONArray) candidateSuccListJson.get(JSONFormat.VALUE));
+                    System.out.println("Updating list, adding: " + succCandidate);
+                    tempSuccList.add(succCandidate);
+                    break;
+                } catch (ChordOfflineException e) {
+                    System.out.println("Node not responding moving on");
+                    //Node does not respond, so we connect to the next in the successor list
+                    continue;
                 }
             }
-        } catch (ChordOfflineException e) {
-            e.printStackTrace();
         }
-        bulkInsertSuccessors(tempSuccList);
+        String freshSucc = tempSuccList.get(0);
+        if (!getSuccessor().equals(freshSucc)) {
+            //update succ.pred
+            updateNeighbor(JSONFormat.PREDECESSOR, this.address, freshSucc + ChordResource.PREDECESSORPATH);
+        }
+        successorList = tempSuccList;
     }
 
     private void updateNeighbor(String type, String value, String address) {
