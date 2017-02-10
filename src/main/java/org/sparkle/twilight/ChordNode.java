@@ -1,15 +1,17 @@
 package org.sparkle.twilight;
 
+import java.util.List;
+
 public interface ChordNode {
 
     int getID();
 
     /**
-     * Return address of Successor
+     * Return addresses of Successors
      *
-     * @return address of Successor
+     * @return addresses of Successors in a list
      */
-    String getSuccessor();
+    List<String> getSuccessorList();
 
     /**
      * Return address of Predecessor

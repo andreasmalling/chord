@@ -23,6 +23,7 @@ public class ChordResource {
     public static final String PREDECESSORPATH = "predecessor";
     public static final String KILLPATH = "kill";
     public static final String SUCCESSORPATH = "successor";
+    public static final String SUCCESSORLISTPATH = "successorlist";
 
     private Node n;
     private final JSONParser parser = new JSONParser();
@@ -99,6 +100,17 @@ public class ChordResource {
             return Response.status(403).build();
         }
         return Response.ok().build();
+    }
+
+    @Path(SUCCESSORLISTPATH)
+    @GET
+    @Produces(JSONFormat.JSON)
+    public String getSuccessorList() {
+        JSONObject json = new JSONObject();
+        json.put(JSONFormat.TYPE, JSONFormat.SUCCESSORLIST);
+        json.put(JSONFormat.VALUE, n.getSuccessorList());
+
+        return json.toJSONString();
     }
 
     @Path(LOOKUPPATH)
@@ -181,12 +193,14 @@ public class ChordResource {
         public String succ;
         public String pred;
         public List<String> addresses;
+        public List<String> successors;
 
         public Context(final Node node) {
             this.id = node.getID() + "";
             this.succ = node.getSuccessor();
             this.pred = node.getPredecessor();
             this.addresses = node.getAddresses();
+            this.successors = node.getSuccessorList();
         }
     }
 }

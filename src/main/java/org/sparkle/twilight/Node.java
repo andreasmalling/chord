@@ -8,6 +8,7 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.HttpClientBuilder;
+import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
@@ -18,20 +19,19 @@ import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.LinkedBlockingDeque;
-import java.util.concurrent.LinkedBlockingQueue;
 
 public class Node implements ChordNode {
     public final String address = Main.BASE_URI;
     private int id;
-    private String successor;
+    private List<String> successorList;
     private String predecessor;
     private HttpClient client;
     private boolean inNetwork = false;
     private int predecessorId;
     private List<String> addresses;
+
+    private final int successorListLength = 5;
 
     public Node() {
         initializeNode();
@@ -53,6 +53,7 @@ public class Node implements ChordNode {
         id = generateHash(address);
         client = HttpClientBuilder.create().build();
         addresses = new CopyOnWriteArrayList();
+        successorList = new CopyOnWriteArrayList();
     }
 
     private int generateHash(String address) {
@@ -65,8 +66,12 @@ public class Node implements ChordNode {
     }
 
     @Override
+    public List<String> getSuccessorList() {
+        return successorList;
+    }
+
     public String getSuccessor() {
-        return successor;
+        return successorList.get(0);
     }
 
     @Override
@@ -76,7 +81,19 @@ public class Node implements ChordNode {
 
     @Override
     public void setSuccessor(String successor) {
-        this.successor = successor;
+        successorList.add(0, successor);
+        succListSizeConstrainer();
+    }
+
+    private void succListSizeConstrainer() {
+        while (successorList.size() > successorListLength) {
+            successorList.remove(successorListLength - 1);
+        }
+    }
+
+    public void bulkInsertSuccessors(List<String> successors) {
+        successorList.addAll(1, successors);
+        succListSizeConstrainer();
     }
 
     @Override
@@ -88,18 +105,27 @@ public class Node implements ChordNode {
     @Override
     public void joinRing(String address) {
         setSuccessor(address);
-        JSONObject json = httpGetRequest(getSuccessor() + ChordResource.PREDECESSORPATH);
-        String predurl = json.get(JSONFormat.VALUE).toString();
+        JSONObject predJson = httpGetRequest(getSuccessor() + ChordResource.PREDECESSORPATH);
+        String predurl = predJson.get(JSONFormat.VALUE).toString();
         setPredecessor(predurl);
         //update pred.succ
-        updateNeighbor(JSONFormat.SUCCESSOR, this.address, predecessor + ChordResource.SUCCESSORPATH);
+        updateNeighbor(JSONFormat.SUCCESSOR, this.address, getPredecessor() + ChordResource.SUCCESSORPATH);
         //update succ.pred
-        updateNeighbor(JSONFormat.PREDECESSOR, this.address, successor + ChordResource.PREDECESSORPATH);
+        updateNeighbor(JSONFormat.PREDECESSOR, this.address, getSuccessor() + ChordResource.PREDECESSORPATH);
 
+        updateSuccessorList();
         inNetwork = true;
     }
 
-    private void updateNeighbor(String type,  String value, String address) {
+    private void updateSuccessorList() {
+        //Add successors successorlist as this node's (after the first successor)
+        //TODO should make list correctly
+        JSONObject succListJson = httpGetRequest(getSuccessor() + ChordResource.SUCCESSORLISTPATH);
+        ArrayList succList = new ArrayList((JSONArray) succListJson.get(JSONFormat.VALUE));
+        bulkInsertSuccessors(succList);
+    }
+
+    private void updateNeighbor(String type, String value, String address) {
         JSONObject postjson = new JSONObject();
         postjson.put(JSONFormat.TYPE, type);
         postjson.put(JSONFormat.VALUE, value);
@@ -108,10 +134,10 @@ public class Node implements ChordNode {
 
     @Override
     public void leaveRing() {
-        // Find predecessor and set it's Successor to this node's Successor
-        updateNeighbor(JSONFormat.SUCCESSOR, successor, predecessor + ChordResource.SUCCESSORPATH);
+        // Find predecessor and set its Successor to this node's Successor
+        updateNeighbor(JSONFormat.SUCCESSOR, getSuccessor(), getPredecessor() + ChordResource.SUCCESSORPATH);
         // and set pred of succ to this node's pred
-        updateNeighbor(JSONFormat.PREDECESSOR, predecessor, successor + ChordResource.PREDECESSORPATH);
+        updateNeighbor(JSONFormat.PREDECESSOR, getPredecessor(), getSuccessor() + ChordResource.PREDECESSORPATH);
         Main.server.shutdownNow();
     }
 
@@ -120,7 +146,7 @@ public class Node implements ChordNode {
         System.exit(0);
     }
 
-
+    //TODO validate lookup for nodes pushed out from ring
     @Override
     public void lookup(int key, String initiator) {
         if (predecessorId == id) {
@@ -132,7 +158,7 @@ public class Node implements ChordNode {
             //the node has the lowest id, and the pred has the highest (first and last in ring)
             performQueryRepsonse(initiator, key);
         } else {
-            performLookup(successor, key, initiator);
+            performLookup(getSuccessor(), key, initiator);
         }
     }
 
@@ -212,3 +238,4 @@ public class Node implements ChordNode {
         return addresses;
     }
 }
+
