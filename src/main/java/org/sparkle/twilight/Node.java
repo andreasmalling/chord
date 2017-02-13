@@ -155,6 +155,10 @@ public class Node implements ChordNode {
     private void upsertSuccessorList() {
         //Sorry
         //Add successors successorlist as this node's (after the first successor)
+        if (successorList.get(0).equals(this.address)) {
+            return;
+        }
+
         CopyOnWriteArrayList<String> tempSuccList = new CopyOnWriteArrayList<>();
         boolean self = false;
         List<String> succList = successorList;
