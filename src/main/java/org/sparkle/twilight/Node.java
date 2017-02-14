@@ -1,5 +1,6 @@
 package org.sparkle.twilight;
 
+import javafx.beans.binding.DoubleExpression;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.ClientProtocolException;
@@ -24,8 +25,10 @@ import java.net.SocketTimeoutException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.function.DoubleBinaryOperator;
 
 public class Node implements ChordNode {
+    private static final int IDSPACE = 256;
     public final String address = Main.BASE_URI;
     private int id;
     private List<String> successorList;
@@ -34,6 +37,7 @@ public class Node implements ChordNode {
     private boolean inNetwork = false;
     private int predecessorId;
     private List<String> addresses;
+    private List<Finger> fingerTable;
 
     private final int successorListLength = 5;
     private final int connectionTimeout = 3000;
@@ -44,7 +48,7 @@ public class Node implements ChordNode {
         setSuccessor(address);
         setPredecessor(address);
         inNetwork = true;
-        Runnable successorListMaintainerThread = () -> maintainSuccessorList();
+        Runnable successorListMaintainerThread = () -> maintainLists();
         new Thread(successorListMaintainerThread).start();
     }
 
@@ -66,6 +70,13 @@ public class Node implements ChordNode {
         id = generateHash(address);
         addresses = new CopyOnWriteArrayList<>();
         successorList = new CopyOnWriteArrayList<>();
+        fingerTable = new CopyOnWriteArrayList<>();
+
+        int fingerTableSize = (int) (Math.log(IDSPACE) / Math.log(2));
+        for (int i=0; i<fingerTableSize;i++) {
+            int lookupID = (id + (int) (Math.pow(2, i))) % IDSPACE;
+            fingerTable.add(new Finger(lookupID,null));
+        }
     }
 
     private int generateHash(String address) {
@@ -130,22 +141,27 @@ public class Node implements ChordNode {
             upsertSuccessorList();
             inNetwork = true;
 
-            Runnable successorListMaintainerThread = () -> maintainSuccessorList();
+            Runnable successorListMaintainerThread = () -> maintainLists();
             new Thread(successorListMaintainerThread).start();
         } catch (ChordOfflineException e) {
             e.printStackTrace();
         }
     }
 
-    private void maintainSuccessorList() {
+    private void maintainLists() {
         while (inNetwork) {
-            double random = Math.random() * 10000;
+            double random1 = Math.random() * 10000;
+            double random2 = Math.random() * 10000;
             try {
-                System.out.println("I'm sleeping for " + (10000 + random) / 1000 + " seconds... Zzz");
-                Thread.sleep((long) (10000 + random));
+                System.out.println("I'm sleeping for " + (10000 + random1) / 1000 + " seconds... Zzz");
+                Thread.sleep((long) (10000 + random1));
                 System.out.println("I'm awake! Let's update some successors!");
                 upsertSuccessorList();
-                System.out.println("Done upserting bois, back to sleep.");
+                System.out.println("Done upserting succs bois, back to sleep.");
+                System.out.println("I'm sleeping for " + (10000 + random2) / 1000 + " seconds... Zzz");
+                Thread.sleep((long) (10000 + random2));
+                upsertFingerTable();
+                System.out.println("Done upserting fingerblasters bois, back to sleep.");
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
@@ -190,6 +206,30 @@ public class Node implements ChordNode {
             updateNeighbor(JSONFormat.PREDECESSOR, this.address, freshSucc + ChordResource.PREDECESSORPATH);
         }
         successorList = tempSuccList;
+    }
+
+    private void upsertFingerTable() {
+        int fingerTableSize = (int) (Math.log(IDSPACE) / Math.log(2));
+        for (int i=0; i<fingerTableSize;i++) {
+            int lookupID = (id + (int) (Math.pow(2, i))) % IDSPACE;
+            // TODO: Czech successors
+            performLookup(getSuccessor(), lookupID, address);
+        }
+    }
+
+
+    @Override
+    public void updateFingerTable(int key, String address) {
+        //check if key is part of fingertable
+        for (int i = 0; i<fingerTable.size(); i++) {
+            if (key == fingerTable.get(i).getId()) {
+                fingerTable.set(i, new Finger(key, address));
+            }
+            if (address.equals(fingerTable.get(i).getAddress())) {
+                fingerTable.get(i).updateTimeStamp();;
+            }
+
+        }
     }
 
     private void updateNeighbor(String type, String value, String address) {
@@ -303,8 +343,14 @@ public class Node implements ChordNode {
         return inNetwork;
     }
 
+
     public List<String> getAddresses() {
         return addresses;
     }
+
+    public List<Finger> getFingerTable() {
+        return fingerTable;
+    }
+
 }
 

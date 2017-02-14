@@ -162,6 +162,7 @@ public class ChordResource {
                     n.getAddresses().remove(n.getAddresses().size() - 1);
                 }
                 n.getAddresses().add(0, "The address responsible for key: " + key + " is: " + address);
+                n.updateFingerTable(key, address);
             } else {
                 Runnable joinThread = () -> n.joinRing(address);
                 new Thread(joinThread).start();
@@ -194,6 +195,7 @@ public class ChordResource {
         public String pred;
         public List<String> addresses;
         public List<String> successors;
+        public List<Finger> fingerBlasters;
 
         public Context(final Node node) {
             this.id = node.getID() + "";
@@ -201,6 +203,7 @@ public class ChordResource {
             this.pred = node.getPredecessor();
             this.addresses = node.getAddresses();
             this.successors = node.getSuccessorList();
+            this.fingerBlasters = node.getFingerTable();
         }
     }
 }

@@ -56,4 +56,6 @@ public interface ChordNode {
     void lookup(int id, String initiator);
 
     boolean isInNetwork();
+
+    void updateFingerTable(int key, String address);
 }
