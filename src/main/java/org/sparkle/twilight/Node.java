@@ -225,10 +225,6 @@ public class Node implements ChordNode {
             if (key == fingerTable.get(i).getId()) {
                 fingerTable.set(i, new Finger(key, address));
             }
-            if (address.equals(fingerTable.get(i).getAddress())) {
-                fingerTable.get(i).updateTimeStamp();;
-            }
-
         }
     }
 
