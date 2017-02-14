@@ -1,6 +1,5 @@
 package org.sparkle.twilight;
 
-import javafx.beans.binding.DoubleExpression;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.ClientProtocolException;
@@ -25,7 +24,6 @@ import java.net.SocketTimeoutException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.function.DoubleBinaryOperator;
 
 public class Node implements ChordNode {
     private static final int IDSPACE = 256;
@@ -61,7 +59,6 @@ public class Node implements ChordNode {
     }
 
     private void initializeNode() {
-
         HttpClientBuilder builder = HttpClientBuilder.create();
         RequestConfig config = RequestConfig.custom().setConnectTimeout(connectionTimeout).setSocketTimeout(connectionTimeout).build();
         builder.setDefaultRequestConfig(config);
@@ -72,11 +69,7 @@ public class Node implements ChordNode {
         successorList = new CopyOnWriteArrayList<>();
         fingerTable = new CopyOnWriteArrayList<>();
 
-        int fingerTableSize = (int) (Math.log(IDSPACE) / Math.log(2));
-        for (int i=0; i<fingerTableSize;i++) {
-            int lookupID = (id + (int) (Math.pow(2, i))) % IDSPACE;
-            fingerTable.add(new Finger(lookupID,null));
-        }
+        upsertFingerTable(true);
     }
 
     private int generateHash(String address) {
@@ -112,11 +105,6 @@ public class Node implements ChordNode {
         while (successorList.size() > successorListLength) {
             successorList.remove(successorList.size() - 1);
         }
-    }
-
-    public void bulkInsertSuccessors(List<String> successors) {
-        successorList.addAll(1, successors);
-        succListSizeConstrainer();
     }
 
     @Override
@@ -160,7 +148,7 @@ public class Node implements ChordNode {
                 System.out.println("Done upserting succs bois, back to sleep.");
                 System.out.println("I'm sleeping for " + (10000 + random2) / 1000 + " seconds... Zzz");
                 Thread.sleep((long) (10000 + random2));
-                upsertFingerTable();
+                upsertFingerTable(false);
                 System.out.println("Done upserting fingerblasters bois, back to sleep.");
             } catch (InterruptedException e) {
                 e.printStackTrace();
@@ -171,10 +159,11 @@ public class Node implements ChordNode {
     private void upsertSuccessorList() {
         //Sorry
         //Add successors successorlist as this node's (after the first successor)
+
+        //If we only have one node in chord, we do nothing
         if (successorList.get(0).equals(this.address)) {
             return;
         }
-
         CopyOnWriteArrayList<String> tempSuccList = new CopyOnWriteArrayList<>();
         boolean self = false;
         List<String> succList = successorList;
@@ -208,20 +197,23 @@ public class Node implements ChordNode {
         successorList = tempSuccList;
     }
 
-    private void upsertFingerTable() {
+    private void upsertFingerTable(boolean first) {
         int fingerTableSize = (int) (Math.log(IDSPACE) / Math.log(2));
-        for (int i=0; i<fingerTableSize;i++) {
+        for (int i = 0; i < fingerTableSize; i++) {
             int lookupID = (id + (int) (Math.pow(2, i))) % IDSPACE;
-            // TODO: Czech successors
-            performLookup(getSuccessor(), lookupID, address);
+            if (first) {
+                fingerTable.add(new Finger(lookupID, null));
+            } else {
+                // TODO: Czech successors
+                performLookup(getSuccessor(), lookupID, address);
+            }
         }
     }
-
 
     @Override
     public void updateFingerTable(int key, String address) {
         //check if key is part of fingertable
-        for (int i = 0; i<fingerTable.size(); i++) {
+        for (int i = 0; i < fingerTable.size(); i++) {
             if (key == fingerTable.get(i).getId()) {
                 fingerTable.set(i, new Finger(key, address));
             }
