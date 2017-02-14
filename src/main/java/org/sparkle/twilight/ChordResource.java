@@ -27,6 +27,7 @@ public class ChordResource {
 
     private Node n;
     private final JSONParser parser = new JSONParser();
+    private final int lookupListSize = 5;
 
     public ChordResource() {
         if (Main.ENTRY_POINT == null) {
@@ -113,16 +114,16 @@ public class ChordResource {
         return json.toJSONString();
     }
 
-    @Path(LOOKUPPATH)
+    @Path("lookup/{method}")
     @POST
     @Consumes(JSONFormat.JSON)
-    public Response lookup(String request) {
+    public Response lookup(String request, @PathParam("method") String method) {
         JSONParser parser = new JSONParser();
         try {
             JSONObject jRequest = (JSONObject) parser.parse(request);
             int key = Integer.parseInt(jRequest.get(JSONFormat.KEY).toString());
             String address = jRequest.get(JSONFormat.ADDRESS).toString();
-            Runnable lookupThread = () -> n.lookup(key, address);
+            Runnable lookupThread = () -> n.lookup(key, address, method);
             new Thread(lookupThread).start();
         } catch (ParseException e) {
             e.printStackTrace();
@@ -139,11 +140,12 @@ public class ChordResource {
     }
      */
 
-    @Path(LOOKUPPATH)
+    @Path("lookup/{method}")
     @POST
     @Consumes("application/x-www-form-urlencoded")
-    public Response lookupForm(@FormParam("key") String key) {
-        Runnable lookupThread = () -> n.lookup(Integer.parseInt(key), n.address);
+    public Response lookupForm(@FormParam("key") String key, @PathParam("method") String method) {
+        //should be finger
+        Runnable lookupThread = () -> n.lookup(Integer.parseInt(key), n.address, method);
         new Thread(lookupThread).start();
         return Response.ok().build();
     }
@@ -158,7 +160,7 @@ public class ChordResource {
             int key = Integer.parseInt(jreqeust.get(JSONFormat.KEY).toString());
             String address = jreqeust.get(JSONFormat.ADDRESS).toString();
             if (n.isInNetwork()) {
-                if (n.getAddresses().size() > 10) {
+                while (n.getAddresses().size() > lookupListSize) {
                     n.getAddresses().remove(n.getAddresses().size() - 1);
                 }
                 n.getAddresses().add(0, "The address responsible for key: " + key + " is: " + address);
@@ -195,7 +197,7 @@ public class ChordResource {
         public String pred;
         public List<String> addresses;
         public List<String> successors;
-        public List<Finger> fingerBlasters;
+        public List<Finger> fingerTable;
 
         public Context(final Node node) {
             this.id = node.getID() + "";
@@ -203,7 +205,7 @@ public class ChordResource {
             this.pred = node.getPredecessor();
             this.addresses = node.getAddresses();
             this.successors = node.getSuccessorList();
-            this.fingerBlasters = node.getFingerTable();
+            this.fingerTable = node.getFingerTable();
         }
     }
 }

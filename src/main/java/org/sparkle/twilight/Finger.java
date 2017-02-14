@@ -29,6 +29,6 @@ public class Finger {
 
     @Override
     public String toString() {
-        return address;
+        return "" + address;
     }
 }

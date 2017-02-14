@@ -9,5 +9,4 @@ public class JSONFormat {
     public static final String SUCCESSOR = "successor";
     public static final String SUCCESSORLIST = "successorlist";
     public static final String VALUE = "value";
-
 }

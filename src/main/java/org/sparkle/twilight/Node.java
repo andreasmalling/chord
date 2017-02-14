@@ -25,7 +25,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
-public class Node implements ChordNode {
+public class Node {
     private static final int IDSPACE = 256;
     public final String address = Main.BASE_URI;
     private int id;
@@ -53,7 +53,11 @@ public class Node implements ChordNode {
     public Node(String entryPoint) {
         initializeNode();
         // Join Ring
-        performLookup(entryPoint, id, address);
+        try {
+            performLookup(entryPoint, id, address, "linear");
+        } catch (NodeOfflineException e) {
+            System.out.println("The node we tried to connect to is offline");
+        }
         //   Lookup new successor --> Set as successor
         //   Lookup Successor's predecessor --> Set pred's Successor to this node.
     }
@@ -76,12 +80,10 @@ public class Node implements ChordNode {
         return Integer.decode("0x" + DigestUtils.sha1Hex(address).substring(0, 2));
     }
 
-    @Override
     public int getID() {
         return id;
     }
 
-    @Override
     public List<String> getSuccessorList() {
         return successorList;
     }
@@ -90,12 +92,10 @@ public class Node implements ChordNode {
         return successorList.get(0);
     }
 
-    @Override
     public String getPredecessor() {
         return predecessor;
     }
 
-    @Override
     public void setSuccessor(String successor) {
         successorList.add(0, successor);
         succListSizeConstrainer();
@@ -107,16 +107,14 @@ public class Node implements ChordNode {
         }
     }
 
-    @Override
     public void setPredecessor(String predecessor) {
         this.predecessorId = generateHash(predecessor);
         this.predecessor = predecessor;
     }
 
-    @Override
     public void joinRing(String address) {
         setSuccessor(address);
-        JSONObject predJson = null;
+        JSONObject predJson;
         try {
             predJson = httpGetRequest(getSuccessor() + ChordResource.PREDECESSORPATH);
             String predurl = predJson.get(JSONFormat.VALUE).toString();
@@ -127,29 +125,30 @@ public class Node implements ChordNode {
             updateNeighbor(JSONFormat.PREDECESSOR, this.address, getSuccessor() + ChordResource.PREDECESSORPATH);
 
             upsertSuccessorList();
+            fingerTable.set(0, new Finger(id + 1, getSuccessor()));
             inNetwork = true;
 
             Runnable successorListMaintainerThread = () -> maintainLists();
             new Thread(successorListMaintainerThread).start();
-        } catch (ChordOfflineException e) {
+        } catch (NodeOfflineException e) {
             e.printStackTrace();
         }
     }
 
     private void maintainLists() {
         while (inNetwork) {
-            double random1 = Math.random() * 10000;
-            double random2 = Math.random() * 10000;
+            int tenSeconds = 10000;
+            double random = Math.random() * tenSeconds;
             try {
-                System.out.println("I'm sleeping for " + (10000 + random1) / 1000 + " seconds... Zzz");
-                Thread.sleep((long) (10000 + random1));
+                System.out.println("I'm sleeping for " + (tenSeconds + random) / 1000 + " seconds... Zzz");
+                Thread.sleep((long) (tenSeconds + random));
+                upsertFingerTable(false);
+                System.out.println("Done upserting fingerblasters bois, back to sleep.");
+                System.out.println("I'm sleeping for " + (tenSeconds + random) / 1000 + " seconds... Zzz");
+                Thread.sleep((long) (tenSeconds + random));
                 System.out.println("I'm awake! Let's update some successors!");
                 upsertSuccessorList();
                 System.out.println("Done upserting succs bois, back to sleep.");
-                System.out.println("I'm sleeping for " + (10000 + random2) / 1000 + " seconds... Zzz");
-                Thread.sleep((long) (10000 + random2));
-                upsertFingerTable(false);
-                System.out.println("Done upserting fingerblasters bois, back to sleep.");
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
@@ -183,7 +182,7 @@ public class Node implements ChordNode {
                     succList = new ArrayList((JSONArray) candidateSuccListJson.get(JSONFormat.VALUE));
                     tempSuccList.add(succCandidate);
                     break;
-                } catch (ChordOfflineException e) {
+                } catch (NodeOfflineException e) {
                     //Node does not respond, so we connect to the next in the successor list
                     continue;
                 }
@@ -205,12 +204,15 @@ public class Node implements ChordNode {
                 fingerTable.add(new Finger(lookupID, null));
             } else {
                 // TODO: Czech successors
-                performLookup(getSuccessor(), lookupID, address);
+                try {
+                    performLookup(getSuccessor(), lookupID, address, "linear");
+                } catch (NodeOfflineException e) {
+                    System.out.println("The node we tried to connect to is offline");
+                }
             }
         }
     }
 
-    @Override
     public void updateFingerTable(int key, String address) {
         //check if key is part of fingertable
         for (int i = 0; i < fingerTable.size(); i++) {
@@ -221,13 +223,17 @@ public class Node implements ChordNode {
     }
 
     private void updateNeighbor(String type, String value, String address) {
-        JSONObject postjson = new JSONObject();
-        postjson.put(JSONFormat.TYPE, type);
-        postjson.put(JSONFormat.VALUE, value);
-        httpPostRequest(address, postjson);
+        try {
+            JSONObject postjson = new JSONObject();
+            postjson.put(JSONFormat.TYPE, type);
+            postjson.put(JSONFormat.VALUE, value);
+            httpPostRequest(address, postjson);
+        } catch (NodeOfflineException e) {
+            System.out.println("The node we tried to connect to is offline");
+
+        }
     }
 
-    @Override
     public void leaveRing() {
         // Find predecessor and set its Successor to this node's Successor
         updateNeighbor(JSONFormat.SUCCESSOR, getSuccessor(), getPredecessor() + ChordResource.SUCCESSORPATH);
@@ -236,29 +242,53 @@ public class Node implements ChordNode {
         Main.server.shutdownNow();
     }
 
-    @Override
     public void killNode() {
         System.exit(0);
     }
 
-    //TODO validate lookup for nodes pushed out from ring
-    @Override
-    public void lookup(int key, String initiator) {
+    public void lookup(int key, String initiator, String method) {
+        boolean linear = true;
+        if (method.equals("finger")) {
+            linear = false;
+        }
         if (predecessorId == id) {
             //only one in chord
-            performQueryRepsonse(initiator, key);
+            performQueryResponse(initiator, key);
         } else if (id >= key && predecessorId < key) {
-            performQueryRepsonse(initiator, key);
+            performQueryResponse(initiator, key);
         } else if (predecessorId > id && (key <= id || key > predecessorId)) {
             //the node has the lowest id, and the pred has the highest (first and last in ring)
-            performQueryRepsonse(initiator, key);
+            performQueryResponse(initiator, key);
         } else {
-            performLookup(getSuccessor(), key, initiator);
+            //do it the old way
+            if (linear) {
+                try {
+                    performLookup(getSuccessor(), key, initiator, method);
+                } catch (NodeOfflineException e) {
+                    System.out.println("The node we tried to connect to is offline");
+                }
+            } else {
+                //finger blast it
+                for (int i = fingerTable.size() - 1; i >= 0; i--) {
+                    Finger finger = fingerTable.get(i);
+                    if (finger.getAddress() == null) {
+                        continue;
+                    }
+                    if (finger.getId() <= key) {
+                        try {
+                            performLookup(finger.getAddress(), key, initiator, method);
+                        } catch (NodeOfflineException e) {
+                            fingerTable.set(i, new Finger(key, null));
+                        }
+                        return;
+                    }
+                }
+            }
         }
     }
 
-    private void performLookup(String receiver, int id, String address) {
-        String url = receiver + ChordResource.LOOKUPPATH;
+    private void performLookup(String receiver, int id, String address, String method) throws NodeOfflineException {
+        String url = receiver + ChordResource.LOOKUPPATH + "/" + method;
 
         JSONObject json = new JSONObject();
         json.put(JSONFormat.KEY, id);
@@ -266,17 +296,20 @@ public class Node implements ChordNode {
         httpPostRequest(url, json);
     }
 
-    private void performQueryRepsonse(String receiver, int key) {
-        String url = receiver + ChordResource.RECEIVEPATH;
-
-        JSONObject json = new JSONObject();
-        json.put(JSONFormat.KEY, key); //the search key is returned to sender in case they are doing multiple queries
-        json.put(JSONFormat.ADDRESS, address);
-        httpPostRequest(url, json);
+    private void performQueryResponse(String receiver, int key) {
+        try {
+            String url = receiver + ChordResource.RECEIVEPATH;
+            JSONObject json = new JSONObject();
+            json.put(JSONFormat.KEY, key); //the search key is returned to sender in case they are doing multiple queries
+            json.put(JSONFormat.ADDRESS, address);
+            httpPostRequest(url, json);
+        } catch (NodeOfflineException e) {
+            System.out.println("The node we tried to connect to is offline");
+        }
 
     }
 
-    private void httpPostRequest(String url, JSONObject body) {
+    private void httpPostRequest(String url, JSONObject body) throws NodeOfflineException {
         HttpPost postMsg = new HttpPost(url);
         try {
             StringEntity params = new StringEntity(body.toJSONString());
@@ -288,6 +321,8 @@ public class Node implements ChordNode {
                 System.out.println("ERROR ERROR " + url);     //TODO ??
                 throw new IOException();
             }
+        } catch (HttpHostConnectException | ConnectTimeoutException | SocketTimeoutException e) {
+            throw new NodeOfflineException();
         } catch (UnsupportedEncodingException e) {
             e.printStackTrace();
         } catch (ClientProtocolException e) {
@@ -297,7 +332,7 @@ public class Node implements ChordNode {
         }
     }
 
-    private JSONObject httpGetRequest(String url) throws ChordOfflineException {
+    private JSONObject httpGetRequest(String url) throws NodeOfflineException {
         HttpGet getMsg = new HttpGet(url);
         try {
             HttpResponse response = client.execute(getMsg);
@@ -317,7 +352,7 @@ public class Node implements ChordNode {
             JSONObject json = (JSONObject) parser.parse(jsonstring);
             return json;
         } catch (HttpHostConnectException | ConnectTimeoutException | SocketTimeoutException e) {
-            throw new ChordOfflineException();
+            throw new NodeOfflineException();
         } catch (IOException e) {
             e.printStackTrace();
         } catch (ParseException e) {
@@ -326,7 +361,6 @@ public class Node implements ChordNode {
         return null; //TODO fix mabye?
     }
 
-    @Override
     public boolean isInNetwork() {
         return inNetwork;
     }

@@ -11,9 +11,13 @@
 SUCCESSOR: <a href="{{succ}}"> {{succ}} </a> <br/>
 PREDECESSOR: <a href="{{pred}}"> {{pred}} </a> <br/>
 <iframe width="0" height="0" border="0" name="nothing" id="nothing" style="display: none"></iframe>
-<form action="/lookup" method="post" target="nothing">
+<form action="/lookup/linear" method="post" target="nothing">
     <input type="number" name="key" placeholder="Find node with key..." min="0" max="255"/>
-    <input type="submit" value="FIND ID"/>
+    <input type="submit" value="Linear lookup"/>
+</form>
+<form action="/lookup/finger" method="post" target="nothing">
+    <input type="number" name="key" placeholder="Find node with key..." min="0" max="255"/>
+    <input type="submit" value="Finger lookup"/>
 </form>
 <div style="height: 300px;">
     <div style="float: left; width: 25%; margin-left: 25%">
@@ -23,10 +27,10 @@ PREDECESSOR: <a href="{{pred}}"> {{pred}} </a> <br/>
         {{/successors}}
     </div>
     <div style="float: left; width: 25%; margin-right: 25%">
-        <h1>Fingerblasters</h1>
-        {{#fingerBlasters}}
+        <h1>Finger Table</h1>
+        {{#fingerTable}}
             <p><a href="{{.}}"> {{.}} </a></p>
-        {{/fingerBlasters}}
+        {{/fingerTable}}
     </div>
 </div>
 <div>
@@ -41,7 +45,7 @@ PREDECESSOR: <a href="{{pred}}"> {{pred}} </a> <br/>
 </br>
 </br>
 <form action="/kill" method="post">
-    <input type="submit" value="KILL ME"/>
+    <input type="submit" value="KILL"/>
 </form>
 <img src="http://vignette2.wikia.nocookie.net/vsbattles/images/4/4e/Twilight_Sparkle.png/revision/latest?cb=20141116084624"
      width="293"/>

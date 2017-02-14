@@ -4,7 +4,7 @@ set /A port=9000
 start cmd /c "mvn exec:java -Dexec.args='8080'"
 pause
 :check
-IF NOT "%port%"=="9015" (Goto loop)
+IF NOT "%port%"=="9045" (Goto loop)
 goto end
 :loop
 echo %port%
