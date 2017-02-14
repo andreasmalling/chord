@@ -54,7 +54,7 @@ public class Node {
         initializeNode();
         // Join Ring
         try {
-            performLookup(entryPoint, id, address, "linear");
+            performLookup(entryPoint, id, address, "linear", 0);
         } catch (NodeOfflineException e) {
             System.out.println("The node we tried to connect to is offline");
         }
@@ -205,7 +205,7 @@ public class Node {
             } else {
                 // TODO: Czech successors
                 try {
-                    performLookup(getSuccessor(), lookupID, address, "linear");
+                    performLookup(getSuccessor(), lookupID, address, "linear", 0);
                 } catch (NodeOfflineException e) {
                     System.out.println("The node we tried to connect to is offline");
                 }
@@ -246,29 +246,38 @@ public class Node {
         System.exit(0);
     }
 
-    public void lookup(int key, String initiator, String method) {
+    public void lookup(int key, String initiator, String method, int hops) {
         boolean linear = true;
         if (method.equals("finger")) {
             linear = false;
         }
         if (predecessorId == id) {
             //only one in chord
-            performQueryResponse(initiator, key);
+            performQueryResponse(initiator, key, hops);
         } else if (id >= key && predecessorId < key) {
-            performQueryResponse(initiator, key);
+            performQueryResponse(initiator, key, hops);
         } else if (predecessorId > id && (key <= id || key > predecessorId)) {
             //the node has the lowest id, and the pred has the highest (first and last in ring)
-            performQueryResponse(initiator, key);
+            performQueryResponse(initiator, key, hops);
         } else {
             //do it the old way
             if (linear) {
                 try {
-                    performLookup(getSuccessor(), key, initiator, method);
+                    performLookup(getSuccessor(), key, initiator, method, hops);
                 } catch (NodeOfflineException e) {
                     System.out.println("The node we tried to connect to is offline");
                 }
             } else {
                 //finger blast it
+
+                Finger lastFinger = fingerTable.get(fingerTable.size() - 1);
+                if (lastFinger.getId() > key) {
+                    try {
+                        performLookup(lastFinger.getAddress(), key, initiator, method, hops);
+                    } catch (NodeOfflineException e) {
+                        fingerTable.set(fingerTable.size() - 1, new Finger(key, null));
+                    }
+                }
                 for (int i = fingerTable.size() - 1; i >= 0; i--) {
                     Finger finger = fingerTable.get(i);
                     if (finger.getAddress() == null) {
@@ -276,7 +285,7 @@ public class Node {
                     }
                     if (finger.getId() <= key) {
                         try {
-                            performLookup(finger.getAddress(), key, initiator, method);
+                            performLookup(finger.getAddress(), key, initiator, method, hops);
                         } catch (NodeOfflineException e) {
                             fingerTable.set(i, new Finger(key, null));
                         }
@@ -287,21 +296,23 @@ public class Node {
         }
     }
 
-    private void performLookup(String receiver, int id, String address, String method) throws NodeOfflineException {
+    private void performLookup(String receiver, int id, String address, String method, int hops) throws NodeOfflineException {
         String url = receiver + ChordResource.LOOKUPPATH + "/" + method;
 
         JSONObject json = new JSONObject();
         json.put(JSONFormat.KEY, id);
         json.put(JSONFormat.ADDRESS, address);
+        json.put(JSONFormat.HOPS, hops + 1);
         httpPostRequest(url, json);
     }
 
-    private void performQueryResponse(String receiver, int key) {
+    private void performQueryResponse(String receiver, int key, int hops) {
         try {
             String url = receiver + ChordResource.RECEIVEPATH;
             JSONObject json = new JSONObject();
             json.put(JSONFormat.KEY, key); //the search key is returned to sender in case they are doing multiple queries
             json.put(JSONFormat.ADDRESS, address);
+            json.put(JSONFormat.HOPS, hops);
             httpPostRequest(url, json);
         } catch (NodeOfflineException e) {
             System.out.println("The node we tried to connect to is offline");

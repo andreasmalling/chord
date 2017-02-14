@@ -123,7 +123,8 @@ public class ChordResource {
             JSONObject jRequest = (JSONObject) parser.parse(request);
             int key = Integer.parseInt(jRequest.get(JSONFormat.KEY).toString());
             String address = jRequest.get(JSONFormat.ADDRESS).toString();
-            Runnable lookupThread = () -> n.lookup(key, address, method);
+            int hops = Integer.parseInt(jRequest.get(JSONFormat.HOPS).toString());
+            Runnable lookupThread = () -> n.lookup(key, address, method, hops);
             new Thread(lookupThread).start();
         } catch (ParseException e) {
             e.printStackTrace();
@@ -145,7 +146,7 @@ public class ChordResource {
     @Consumes("application/x-www-form-urlencoded")
     public Response lookupForm(@FormParam("key") String key, @PathParam("method") String method) {
         //should be finger
-        Runnable lookupThread = () -> n.lookup(Integer.parseInt(key), n.address, method);
+        Runnable lookupThread = () -> n.lookup(Integer.parseInt(key), n.address, method, 0);
         new Thread(lookupThread).start();
         return Response.ok().build();
     }
@@ -156,14 +157,15 @@ public class ChordResource {
     public Response response(String request) {
         JSONParser parser = new JSONParser();
         try {
-            JSONObject jreqeust = (JSONObject) parser.parse(request);
-            int key = Integer.parseInt(jreqeust.get(JSONFormat.KEY).toString());
-            String address = jreqeust.get(JSONFormat.ADDRESS).toString();
+            JSONObject jRequest = (JSONObject) parser.parse(request);
+            int key = Integer.parseInt(jRequest.get(JSONFormat.KEY).toString());
+            int hops = Integer.parseInt(jRequest.get(JSONFormat.HOPS).toString());
+            String address = jRequest.get(JSONFormat.ADDRESS).toString();
             if (n.isInNetwork()) {
                 while (n.getAddresses().size() > lookupListSize) {
                     n.getAddresses().remove(n.getAddresses().size() - 1);
                 }
-                n.getAddresses().add(0, "The address responsible for key: " + key + " is: " + address);
+                n.getAddresses().add(0, "The address responsible for key: " + key + " is: " + address + " (took " + hops +  " hops)");
                 n.updateFingerTable(key, address);
             } else {
                 Runnable joinThread = () -> n.joinRing(address);
