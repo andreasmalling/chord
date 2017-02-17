@@ -10,6 +10,7 @@ import javax.ws.rs.*;
 import javax.ws.rs.core.Response;
 import java.net.URI;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Root resource
@@ -24,7 +25,7 @@ public class ChordResource {
     public static final String KILLPATH = "kill";
     public static final String SUCCESSORPATH = "successor";
     public static final String SUCCESSORLISTPATH = "successor/list";
-    private static final String RESOURCEPATH = "resource";
+    public static final String RESOURCEPATH = "resource";
 
     private Node n;
     private final JSONParser parser = new JSONParser();
@@ -168,6 +169,15 @@ public class ChordResource {
                 }
                 n.getAddresses().add(0, "The address responsible for key: " + key + " is: " + address + " (took " + hops +  " hops)");
                 n.updateFingerTable(key, address);
+
+                Map<Integer, Instruction> instMap = n.getInstructionMap();
+                Instruction inst = instMap.get(key);
+                if (inst != null) {
+                    instMap.remove(key);
+                    Runnable execThread = () -> n.executeInstruction(inst, address);
+                    new Thread(execThread).start();
+                }
+
             } else {
                 Runnable joinThread = () -> n.joinRing(address);
                 new Thread(joinThread).start();
@@ -188,8 +198,8 @@ public class ChordResource {
         JSONParser parser = new JSONParser();
         try {
             JSONObject jRequest = (JSONObject) parser.parse(request);
-            String url = jRequest.get(JSONFormat.ADDRESS).toString();
-            n.setDataSource(new DataSource(url));
+            Runnable putResourceThread = () -> n.handlePutResource(jRequest);
+            new Thread(putResourceThread).start();
         } catch (ParseException e) {
             e.printStackTrace();
         }
@@ -206,15 +216,9 @@ public class ChordResource {
             json.put(JSONFormat.HASDATA, false);
             json.put(JSONFormat.DATA, null);
         } else {
-            try {
-                String data = d.getData();
-                json.put(JSONFormat.HASDATA, true);
-                json.put(JSONFormat.DATA, data);
-            } catch (DataSourceNotAvailableException e) {
-                json.put(JSONFormat.HASDATA, false);
-                json.put(JSONFormat.DATA, null);
-                System.out.println("datasource was unavailable...");
-            }
+            String data = d.getData();
+            json.put(JSONFormat.HASDATA, true);
+            json.put(JSONFormat.DATA, data);
         }
         return json.toJSONString();
     }
@@ -241,6 +245,8 @@ public class ChordResource {
         public List<String> addresses;
         public List<String> successors;
         public List<Finger> fingerTable;
+        public boolean hasData = false;
+        public String data = "";
 
         public Context(final Node node) {
             this.id = node.getID() + "";
@@ -249,6 +255,11 @@ public class ChordResource {
             this.addresses = node.getAddresses();
             this.successors = node.getSuccessorList();
             this.fingerTable = node.getFingerTable();
+            DataSource d = node.getDataSource();
+            if (d != null) {
+                this.hasData = true;
+                this.data = node.getDataSource().getData();
+            }
         }
     }
 }

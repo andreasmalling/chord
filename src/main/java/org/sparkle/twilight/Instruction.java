@@ -6,24 +6,24 @@ public class Instruction {
     public enum Method {GET, POST, PUT, DELETE}
 
     private Method method;
-    private String url;
     private JSONObject body;
+    private String target;
 
-    public Instruction(Method method, String url, JSONObject body) {
+    public Instruction(Method method, JSONObject body, String target) {
         this.method = method;
-        this.url = url;
         this.body = body;
+        this.target = target;
     }
 
     public Method getMethod() {
         return method;
     }
 
-    public String getUrl() {
-        return url;
-    }
-
     public JSONObject getBody() {
         return body;
+    }
+
+    public String getTarget() {
+        return target;
     }
 }

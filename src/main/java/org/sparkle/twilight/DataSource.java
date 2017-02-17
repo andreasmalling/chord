@@ -23,6 +23,12 @@ public class DataSource {
     private String url;
     private JSONParser parser;
     private HttpClient client;
+    private String data;
+
+    public String getData() {
+        System.out.println("getting data");
+        return data;
+    }
 
     public DataSource(String url) {
         this.url = url;
@@ -35,11 +41,11 @@ public class DataSource {
         client = builder.build();
     }
 
-    public String getData() throws DataSourceNotAvailableException {
+    private void updateData() throws DataSourceNotAvailableException {
         try {
             JSONObject json = httpGetRequest(url);
             if (json.containsKey("result")) {
-                return json.get("result").toString();
+                data = json.get("result").toString();
             } else {
                 throw new DataSourceNotAvailableException();
             }
@@ -77,5 +83,22 @@ public class DataSource {
             e.printStackTrace();
         }
         return null; //TODO fix mabye?
+    }
+
+    public void updateLoop() {
+        data = "DATA NOT AVAILABLE";
+        while(true) {
+            try {
+            updateData();
+            System.out.println("data is updated with new value: " + data);
+            int tenSeconds = 10000;
+            double random = Math.random() * tenSeconds;
+                Thread.sleep((long) (tenSeconds + random));
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            } catch (DataSourceNotAvailableException e) {
+                data = "DATA NOT AVAILABLE";
+            }
+        }
     }
 }

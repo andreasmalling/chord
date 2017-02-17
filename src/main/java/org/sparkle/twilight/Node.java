@@ -7,6 +7,7 @@ import org.apache.http.client.HttpClient;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
+import org.apache.http.client.methods.HttpPut;
 import org.apache.http.conn.ConnectTimeoutException;
 import org.apache.http.conn.HttpHostConnectException;
 import org.apache.http.entity.StringEntity;
@@ -75,11 +76,13 @@ public class Node {
         addresses = new CopyOnWriteArrayList<>();
         successorList = new CopyOnWriteArrayList<>();
         fingerTable = new CopyOnWriteArrayList<>();
+        instructionMap = new ConcurrentHashMap<>();
 
         upsertFingerTable(true);
     }
 
-    private int generateHash(String address) {
+    //TODO THIS SHOULD NOT BE HERE, MOVE TO HELPER CLASS
+    public int generateHash(String address) {
         return Integer.decode("0x" + DigestUtils.sha1Hex(address).substring(0, 2));
     }
 
@@ -254,13 +257,7 @@ public class Node {
         if (method.equals("finger")) {
             linear = false;
         }
-        if (predecessorId == id) {
-            //only one in chord
-            performQueryResponse(initiator, key, hops);
-        } else if (id >= key && predecessorId < key) {
-            performQueryResponse(initiator, key, hops);
-        } else if (predecessorId > id && (key <= id || key > predecessorId)) {
-            //the node has the lowest id, and the pred has the highest (first and last in ring)
+        if (isMyKey(key)) {
             performQueryResponse(initiator, key, hops);
         } else {
             //do it the old way
@@ -299,6 +296,20 @@ public class Node {
         }
     }
 
+    private boolean isMyKey(int key) {
+        if (predecessorId == id) {
+            //only one in chord
+            return true;
+        } else if (id >= key && predecessorId < key) {
+            return true;
+        } else if (predecessorId > id && (key <= id || key > predecessorId)) {
+            //the node has the lowest id, and the pred has the highest (first and last in ring)
+            return true;
+        } else {
+            return false;
+        }
+    }
+
     private void performLookup(String receiver, int id, String address, String method, int hops) throws NodeOfflineException {
         String url = receiver + ChordResource.LOOKUPPATH + "/" + method;
 
@@ -325,6 +336,29 @@ public class Node {
 
     private void httpPostRequest(String url, JSONObject body) throws NodeOfflineException {
         HttpPost postMsg = new HttpPost(url);
+        try {
+            StringEntity params = new StringEntity(body.toJSONString());
+            postMsg.addHeader("content-type", JSONFormat.JSON);
+            postMsg.setEntity(params);
+            HttpResponse response = client.execute(postMsg);
+            if (response.getStatusLine().getStatusCode() != 200) {
+                System.out.println(response.getStatusLine().getStatusCode());
+                System.out.println("ERROR ERROR " + url);     //TODO ??
+                throw new IOException();
+            }
+        } catch (HttpHostConnectException | ConnectTimeoutException | SocketTimeoutException e) {
+            throw new NodeOfflineException();
+        } catch (UnsupportedEncodingException e) {
+            e.printStackTrace();
+        } catch (ClientProtocolException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void httpPutRequest(String url, JSONObject body) throws NodeOfflineException {
+        HttpPut postMsg = new HttpPut(url);
         try {
             StringEntity params = new StringEntity(body.toJSONString());
             postMsg.addHeader("content-type", JSONFormat.JSON);
@@ -392,9 +426,56 @@ public class Node {
         return dataSource;
     }
 
-    public void setDataSource(DataSource dataSource) {
-        this.dataSource = dataSource;
+    public ConcurrentHashMap<Integer, Instruction> getInstructionMap() {
+        return instructionMap;
     }
 
+    public void handlePutResource(JSONObject json) {
+
+        String address = json.get(JSONFormat.ADDRESS).toString();
+        int key = generateHash(address);
+        System.out.println("the key for the resource is the following value ya dingus: " + key);
+        if (isMyKey(key)) {
+            dataSource = new DataSource(address);
+            Runnable dataUpdateThread = () -> dataSource.updateLoop();
+            new Thread(dataUpdateThread).start();
+
+        } else {
+            //create instruction to be executed later when we receive the response on /receive
+            Instruction inst = new Instruction(Instruction.Method.PUT, json, ChordResource.RESOURCEPATH);
+            instructionMap.put(key,inst);
+            //TODO change to finger instead of linear
+            lookup(key,this.address,"linear",0); //should never return query response
+        }
+    }
+
+    public void executeInstruction(Instruction inst, String address) {
+        String url = address + inst.getTarget();
+        JSONObject body = inst.getBody();
+        Instruction.Method method = inst.getMethod();
+        System.out.println("IMPORTANT INFOS:");
+        System.out.println(url);
+        System.out.println(body);
+        System.out.println(method);
+        try {
+            switch (method) {
+                case GET:
+                    //not handled and doesn't make sense to do here because you cant get the response
+                    break;
+                case POST:
+                    httpPostRequest(url,body);
+                    break;
+                case PUT:
+                    httpPutRequest(url,body);
+                    break;
+                case DELETE:
+                    //not handled
+                    break;
+            }
+        }
+        catch (NodeOfflineException e) {
+            e.printStackTrace();
+        }
+    }
 }
 
