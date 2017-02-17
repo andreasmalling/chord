@@ -39,7 +39,7 @@ public class Node {
     private List<Finger> fingerTable;
 
     private final int successorListLength = 5;
-    private final int connectionTimeout = 6000;
+    private final int connectionTimeout = 3000;
 
     public Node() {
         initializeNode();
@@ -55,7 +55,7 @@ public class Node {
         initializeNode();
         // Join Ring
         try {
-            performLookup(entryPoint, id, address, "linear", 0);
+            performLookup(entryPoint, id, address, new JSONProperties("linear", 0, false));
         } catch (NodeOfflineException e) {
             System.out.println("The node we tried to connect to is offline");
         }
@@ -205,7 +205,7 @@ public class Node {
             } else {
                 // TODO: Czech successors
                 try {
-                    performLookup(getSuccessor(), lookupID, address, "linear", 0);
+                    performLookup(getSuccessor(), lookupID, address, new JSONProperties("linear", 0, false));
                 } catch (NodeOfflineException e) {
                     System.out.println("upsertFingerTable failed. " + getSuccessor() + " is offline");
                 }
@@ -246,24 +246,24 @@ public class Node {
         System.exit(0);
     }
 
-    public void lookup(int key, String initiator, String method, int hops) {
+    public void lookup(int key, String initiator, JSONProperties jsonProperties) {
         boolean linear = true;
-        if (method.equals("finger")) {
+        if (jsonProperties.method.equals("finger")) {
             linear = false;
         }
         if (predecessorId == id) {
             //only one in chord
-            performQueryResponse(initiator, key, hops);
+            performQueryResponse(initiator, key, jsonProperties);
         } else if (id >= key && predecessorId < key) {
-            performQueryResponse(initiator, key, hops);
+            performQueryResponse(initiator, key, jsonProperties);
         } else if (predecessorId > id && (key <= id || key > predecessorId)) {
             //the node has the lowest id, and the pred has the highest (first and last in ring)
-            performQueryResponse(initiator, key, hops);
+            performQueryResponse(initiator, key, jsonProperties);
         } else {
             //do it the old way
             if (linear) {
                 try {
-                    performLookup(getSuccessor(), key, initiator, method, hops);
+                    performLookup(getSuccessor(), key, initiator, jsonProperties);
                 } catch (NodeOfflineException e) {
                     System.out.println("Linear node lookup on " + getSuccessor() + " failed. initiator: " + initiator + " currentSender: " + address);
                 }
@@ -279,7 +279,7 @@ public class Node {
                     lookupFinger = finger;
                 }
                 try {
-                    performLookup(lookupFinger.getAddress(), key, initiator, method, hops);
+                    performLookup(lookupFinger.getAddress(), key, initiator, jsonProperties);
                 } catch (NodeOfflineException e) {
                     System.out.println("Fingertable node lookup on " + getSuccessor() + " failed. initiator: " + initiator + " currentSender: " + address);
                 }
@@ -288,23 +288,25 @@ public class Node {
         }
     }
 
-    private void performLookup(String receiver, int id, String address, String method, int hops) throws NodeOfflineException {
-        String url = receiver + ChordResource.LOOKUPPATH + "/" + method;
+    private void performLookup(String receiver, int id, String address, JSONProperties jsonProperties) throws NodeOfflineException {
+        String url = receiver + ChordResource.LOOKUPPATH + "/" + jsonProperties.method;
 
         JSONObject json = new JSONObject();
         json.put(JSONFormat.KEY, id);
         json.put(JSONFormat.ADDRESS, address);
-        json.put(JSONFormat.HOPS, hops + 1);
+        json.put(JSONFormat.HOPS, jsonProperties.hops + 1);
+        json.put(JSONFormat.SHOWINCONSOLE, jsonProperties.showInConsole);
         httpPostRequest(url, json);
     }
 
-    private void performQueryResponse(String receiver, int key, int hops) {
+    private void performQueryResponse(String receiver, int key, JSONProperties jsonProperties) {
         try {
             String url = receiver + ChordResource.RECEIVEPATH;
             JSONObject json = new JSONObject();
             json.put(JSONFormat.KEY, key); //the search key is returned to sender in case they are doing multiple queries
             json.put(JSONFormat.ADDRESS, address);
-            json.put(JSONFormat.HOPS, hops);
+            json.put(JSONFormat.HOPS, jsonProperties.hops);
+            json.put(JSONFormat.SHOWINCONSOLE, jsonProperties.showInConsole);
             httpPostRequest(url, json);
         } catch (NodeOfflineException e) {
             System.out.println(address + " tried to connect to: " + receiver + "  but failed. Key: " + key + " (performQueryResponse)");

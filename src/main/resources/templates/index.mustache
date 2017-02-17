@@ -20,13 +20,13 @@ PREDECESSOR: <a href="{{pred}}"> {{pred}} </a> <br/>
     <input type="submit" value="Finger lookup"/>
 </form>
 <div style="height: 300px;">
-    <div style="float: left; width: 25%; margin-left: 25%">
+    <div style="float: left; width: 25%; margin-left: 25%; text-align: left;">
         <h1>Successors</h1>
         {{#successors}}
             <p><a href="{{.}}"> {{.}} </a></p>
         {{/successors}}
     </div>
-    <div style="float: left; width: 25%; margin-right: 25%">
+    <div style="float: left; width: 25%; margin-right: 25%; text-align: right;">
         <h1>Finger Table</h1>
         {{#fingerTable}}
             <p>{{.}}</p>
