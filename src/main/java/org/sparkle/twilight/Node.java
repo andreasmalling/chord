@@ -23,6 +23,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.SocketTimeoutException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 public class Node {
@@ -36,6 +37,8 @@ public class Node {
     private int predecessorId;
     private List<String> addresses;
     private List<Finger> fingerTable;
+    private DataSource dataSource;
+    private ConcurrentHashMap<Integer, Instruction> instructionMap;
 
     private final int successorListLength = 5;
     private final int connectionTimeout = 3000;
@@ -383,6 +386,14 @@ public class Node {
 
     public List<Finger> getFingerTable() {
         return fingerTable;
+    }
+
+    public DataSource getDataSource() {
+        return dataSource;
+    }
+
+    public void setDataSource(DataSource dataSource) {
+        this.dataSource = dataSource;
     }
 
 }

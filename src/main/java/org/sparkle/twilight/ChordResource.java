@@ -24,6 +24,7 @@ public class ChordResource {
     public static final String KILLPATH = "kill";
     public static final String SUCCESSORPATH = "successor";
     public static final String SUCCESSORLISTPATH = "successor/list";
+    private static final String RESOURCEPATH = "resource";
 
     private Node n;
     private final JSONParser parser = new JSONParser();
@@ -178,6 +179,46 @@ public class ChordResource {
         }
         return Response.ok().build();
     }
+
+
+    @Path(RESOURCEPATH)
+    @PUT
+    @Consumes(JSONFormat.JSON)
+    public Response putResource(String request) {
+        JSONParser parser = new JSONParser();
+        try {
+            JSONObject jRequest = (JSONObject) parser.parse(request);
+            String url = jRequest.get(JSONFormat.ADDRESS).toString();
+            n.setDataSource(new DataSource(url));
+        } catch (ParseException e) {
+            e.printStackTrace();
+        }
+        return Response.ok().build();
+    }
+
+    @Path(RESOURCEPATH)
+    @GET
+    @Produces(JSONFormat.JSON)
+    public String getResource() {
+        DataSource d = n.getDataSource();
+        JSONObject json = new JSONObject();
+        if (d==null) {
+            json.put(JSONFormat.HASDATA, false);
+            json.put(JSONFormat.DATA, null);
+        } else {
+            try {
+                String data = d.getData();
+                json.put(JSONFormat.HASDATA, true);
+                json.put(JSONFormat.DATA, data);
+            } catch (DataSourceNotAvailableException e) {
+                json.put(JSONFormat.HASDATA, false);
+                json.put(JSONFormat.DATA, null);
+                System.out.println("datasource was unavailable...");
+            }
+        }
+        return json.toJSONString();
+    }
+
 
     @Path(LEAVEPATH)
     @POST

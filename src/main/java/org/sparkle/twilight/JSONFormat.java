@@ -10,4 +10,6 @@ public class JSONFormat {
     public static final String SUCCESSORLIST = "successorlist";
     public static final String VALUE = "value";
     public static final String HOPS = "hops";
+    public static final String DATA = "data";
+    public static final String HASDATA = "has_data";
 }
