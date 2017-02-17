@@ -19,6 +19,11 @@ PREDECESSOR: <a href="{{pred}}"> {{pred}} </a> <br/>
     <input type="number" name="key" placeholder="Find node with key..." min="0" max="4095"/>
     <input type="submit" value="Finger lookup"/>
 </form>
+<div>
+    {{#hasData}}
+        <p>Data: {{data}}</p>
+    {{/hasData}}
+</div>
 <div style="height: 300px;">
     <div style="float: left; width: 25%; margin-left: 25%; text-align: left;">
         <h1>Successors</h1>
