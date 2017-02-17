@@ -26,7 +26,8 @@ import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 public class Node {
-    private static final int IDSPACE = 256;
+    private static final int hashTruncation = 3;
+    private static final int IDSPACE = (int) Math.pow(16, hashTruncation);
     public final String address = Main.BASE_URI;
     private int id;
     private List<String> successorList;
@@ -38,7 +39,7 @@ public class Node {
     private List<Finger> fingerTable;
 
     private final int successorListLength = 5;
-    private final int connectionTimeout = 3000;
+    private final int connectionTimeout = 6000;
 
     public Node() {
         initializeNode();
@@ -77,7 +78,7 @@ public class Node {
     }
 
     private int generateHash(String address) {
-        return Integer.decode("0x" + DigestUtils.sha1Hex(address).substring(0, 2));
+        return Integer.decode("0x" + DigestUtils.sha1Hex(address).substring(0, hashTruncation));
     }
 
     public int getID() {
@@ -143,8 +144,7 @@ public class Node {
                 System.out.println("I'm sleeping for " + (tenSeconds + random) / 1000 + " seconds... Zzz");
                 Thread.sleep((long) (tenSeconds + random));
                 upsertFingerTable(false);
-                System.out.println("Done upserting fingerblasters bois, back to sleep.");
-                System.out.println("I'm sleeping for " + (tenSeconds + random) / 1000 + " seconds... Zzz");
+                System.out.println("Done upserting fingerblasters bois, back to sleep for " + (tenSeconds + random) / 1000 + " seconds... Zzz");
                 Thread.sleep((long) (tenSeconds + random));
                 System.out.println("I'm awake! Let's update some successors!");
                 upsertSuccessorList();
@@ -207,7 +207,7 @@ public class Node {
                 try {
                     performLookup(getSuccessor(), lookupID, address, "linear", 0);
                 } catch (NodeOfflineException e) {
-                    System.out.println("The node we tried to connect to is offline");
+                    System.out.println("upsertFingerTable failed. " + getSuccessor() + " is offline");
                 }
             }
         }
@@ -229,7 +229,7 @@ public class Node {
             postjson.put(JSONFormat.VALUE, value);
             httpPostRequest(address, postjson);
         } catch (NodeOfflineException e) {
-            System.out.println("The node we tried to connect to is offline");
+            System.out.println("Failed updateNeighbor, " + address + " is offline");
 
         }
     }
@@ -265,33 +265,25 @@ public class Node {
                 try {
                     performLookup(getSuccessor(), key, initiator, method, hops);
                 } catch (NodeOfflineException e) {
-                    System.out.println("The node we tried to connect to is offline");
+                    System.out.println("Linear node lookup on " + getSuccessor() + " failed. initiator: " + initiator + " currentSender: " + address);
                 }
             } else {
-                //finger blast it
+                //finger table lookup
+                int lookupModKey = (key - id) % IDSPACE;
+                Finger lookupFinger = fingerTable.get(0);
+                for (Finger finger : fingerTable) {
+                    int fingerModID = (finger.getId() - id) % IDSPACE;
+                    if (fingerModID >= lookupModKey) {
+                        break;
+                    }
+                    lookupFinger = finger;
+                }
+                try {
+                    performLookup(lookupFinger.getAddress(), key, initiator, method, hops);
+                } catch (NodeOfflineException e) {
+                    System.out.println("Fingertable node lookup on " + getSuccessor() + " failed. initiator: " + initiator + " currentSender: " + address);
+                }
 
-                Finger lastFinger = fingerTable.get(fingerTable.size() - 1);
-                if (lastFinger.getId() > key) {
-                    try {
-                        performLookup(lastFinger.getAddress(), key, initiator, method, hops);
-                    } catch (NodeOfflineException e) {
-                        fingerTable.set(fingerTable.size() - 1, new Finger(key, null));
-                    }
-                }
-                for (int i = fingerTable.size() - 1; i >= 0; i--) {
-                    Finger finger = fingerTable.get(i);
-                    if (finger.getAddress() == null) {
-                        continue;
-                    }
-                    if (finger.getId() <= key) {
-                        try {
-                            performLookup(finger.getAddress(), key, initiator, method, hops);
-                        } catch (NodeOfflineException e) {
-                            fingerTable.set(i, new Finger(key, null));
-                        }
-                        return;
-                    }
-                }
             }
         }
     }
@@ -315,7 +307,7 @@ public class Node {
             json.put(JSONFormat.HOPS, hops);
             httpPostRequest(url, json);
         } catch (NodeOfflineException e) {
-            System.out.println("The node we tried to connect to is offline");
+            System.out.println(address + " tried to connect to: " + receiver + "  but failed. Key: " + key + " (performQueryResponse)");
         }
 
     }
@@ -330,7 +322,6 @@ public class Node {
             if (response.getStatusLine().getStatusCode() != 200) {
                 System.out.println(response.getStatusLine().getStatusCode());
                 System.out.println("ERROR ERROR " + url);     //TODO ??
-                throw new IOException();
             }
         } catch (HttpHostConnectException | ConnectTimeoutException | SocketTimeoutException e) {
             throw new NodeOfflineException();
@@ -349,7 +340,6 @@ public class Node {
             HttpResponse response = client.execute(getMsg);
             if (response.getStatusLine().getStatusCode() != 200) {
                 System.out.println("ERROR ERROR: Could not get");     //TODO ??
-                throw new IOException();
             }
             BufferedReader reader = new BufferedReader(
                     new InputStreamReader(

@@ -12,11 +12,11 @@ SUCCESSOR: <a href="{{succ}}"> {{succ}} </a> <br/>
 PREDECESSOR: <a href="{{pred}}"> {{pred}} </a> <br/>
 <iframe width="0" height="0" border="0" name="nothing" id="nothing" style="display: none"></iframe>
 <form action="/lookup/linear" method="post" target="nothing">
-    <input type="number" name="key" placeholder="Find node with key..." min="0" max="255"/>
+    <input type="number" name="key" placeholder="Find node with key..." min="0" max="4095"/>
     <input type="submit" value="Linear lookup"/>
 </form>
 <form action="/lookup/finger" method="post" target="nothing">
-    <input type="number" name="key" placeholder="Find node with key..." min="0" max="255"/>
+    <input type="number" name="key" placeholder="Find node with key..." min="0" max="4095"/>
     <input type="submit" value="Finger lookup"/>
 </form>
 <div style="height: 300px;">
@@ -29,7 +29,7 @@ PREDECESSOR: <a href="{{pred}}"> {{pred}} </a> <br/>
     <div style="float: left; width: 25%; margin-right: 25%">
         <h1>Finger Table</h1>
         {{#fingerTable}}
-            <p><a href="{{.}}"> {{.}} </a></p>
+            <p>{{.}}</p>
         {{/fingerTable}}
     </div>
 </div>
