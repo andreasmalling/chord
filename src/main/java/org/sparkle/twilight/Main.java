@@ -1,7 +1,9 @@
 package org.sparkle.twilight;
 
 import org.glassfish.grizzly.http.server.HttpServer;
+import org.glassfish.hk2.utilities.ServiceLocatorUtilities;
 import org.glassfish.jersey.grizzly2.httpserver.GrizzlyHttpServerFactory;
+import org.glassfish.jersey.server.ApplicationHandler;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.glassfish.jersey.server.mvc.mustache.MustacheMvcFeature;
 
@@ -17,6 +19,7 @@ public class Main {
     public static String BASE_URI;
     public static String ENTRY_POINT;
     public static HttpServer server;
+    public static ResourceConfig rc;
 
     /**
      * Starts Grizzly HTTP server exposing JAX-RS resources defined in this application.
@@ -25,7 +28,7 @@ public class Main {
     public static HttpServer startServer() {
         // create a resource config that scans for JAX-RS resources and providers
         // in org.sparkle.twilight package
-        final ResourceConfig rc = new ResourceConfig().property(
+        rc = new ResourceConfig().property(
                 MustacheMvcFeature.TEMPLATE_BASE_PATH, "templates")
                 .register(MustacheMvcFeature.class)
                 .packages("org.sparkle.twilight")
@@ -53,6 +56,11 @@ public class Main {
             BASE_URI = "http://localhost:8080/";
         }
         server = startServer();
+
+        // http://stackoverflow.com/questions/29289245/immediate-annotation-use-in-jersey2/29292733#29292733
+        // apparently fixes unix problem, introduces scary looking warnings
+        ApplicationHandler handler = new ApplicationHandler(rc);
+        ServiceLocatorUtilities.enableImmediateScope(handler.getServiceLocator());
 
         System.out.println(String.format("Jersey app started with WADL available at "
                 + "%sapplication.wadl\nHit enter to stop it...", BASE_URI));
