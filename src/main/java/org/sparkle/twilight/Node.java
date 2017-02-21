@@ -27,6 +27,8 @@ import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
+import static org.sparkle.twilight.Main.httpUtil;
+
 public class Node {
     private static final int hashTruncation = 3;
     private static final int IDSPACE = (int) Math.pow(16, hashTruncation);
@@ -34,16 +36,16 @@ public class Node {
     private int id;
     private List<String> successorList;
     private String predecessor;
-    private HttpClient client;
+
     private boolean inNetwork = false;
     private int predecessorId;
     private List<String> addresses;
     private List<Finger> fingerTable;
     private DataSource dataSource;
-    private ConcurrentHashMap<Integer, Instruction> instructionMap;
 
+    private ConcurrentHashMap<Integer, Instruction> instructionMap;
     private final int successorListLength = 5;
-    private final int connectionTimeout = 3000;
+    private ChordStorage storage;
 
     public Node() {
         initializeNode();
@@ -68,21 +70,16 @@ public class Node {
     }
 
     private void initializeNode() {
-        HttpClientBuilder builder = HttpClientBuilder.create();
-        RequestConfig config = RequestConfig.custom().setConnectTimeout(connectionTimeout).setSocketTimeout(connectionTimeout).build();
-        builder.setDefaultRequestConfig(config);
-        client = builder.build();
-
         id = generateHash(address);
         addresses = new CopyOnWriteArrayList<>();
         successorList = new CopyOnWriteArrayList<>();
         fingerTable = new CopyOnWriteArrayList<>();
         instructionMap = new ConcurrentHashMap<>();
+        storage = new ChordStorage(String.valueOf(id));
 
         upsertFingerTable(true);
     }
 
-    //TODO THIS SHOULD NOT BE HERE, MOVE TO HELPER CLASS
     private int generateHash(String address) {
         return Integer.decode("0x" + DigestUtils.sha1Hex(address).substring(0, hashTruncation));
     }
@@ -123,7 +120,7 @@ public class Node {
         setSuccessor(address);
         JSONObject predJson;
         try {
-            predJson = httpGetRequest(getSuccessor() + ChordResource.PREDECESSORPATH);
+            predJson = httpUtil.httpGetRequest(getSuccessor() + ChordResource.PREDECESSORPATH);
             String predurl = predJson.get(JSONFormat.VALUE).toString();
             setPredecessor(predurl);
             //update pred.succ
@@ -184,7 +181,7 @@ public class Node {
                     break;
                 }
                 try {
-                    JSONObject candidateSuccListJson = httpGetRequest(succCandidate + ChordResource.SUCCESSORLISTPATH);
+                    JSONObject candidateSuccListJson = httpUtil.httpGetRequest(succCandidate + ChordResource.SUCCESSORLISTPATH);
                     succList = new ArrayList((JSONArray) candidateSuccListJson.get(JSONFormat.VALUE));
                     tempSuccList.add(succCandidate);
                     break;
@@ -233,7 +230,7 @@ public class Node {
             JSONObject postjson = new JSONObject();
             postjson.put(JSONFormat.TYPE, type);
             postjson.put(JSONFormat.VALUE, value);
-            httpPostRequest(address, postjson);
+            httpUtil.httpPostRequest(address, postjson);
         } catch (NodeOfflineException e) {
             System.out.println("Failed updateNeighbor, " + address + " is offline");
 
@@ -245,6 +242,7 @@ public class Node {
         updateNeighbor(JSONFormat.SUCCESSOR, getSuccessor(), getPredecessor() + ChordResource.SUCCESSORPATH);
         // and set pred of succ to this node's pred
         updateNeighbor(JSONFormat.PREDECESSOR, getPredecessor(), getSuccessor() + ChordResource.PREDECESSORPATH);
+        storage.shutdown();
         Main.server.shutdownNow();
     }
 
@@ -310,7 +308,7 @@ public class Node {
         json.put(JSONFormat.ADDRESS, address);
         json.put(JSONFormat.HOPS, jsonProperties.hops + 1);
         json.put(JSONFormat.SHOWINCONSOLE, jsonProperties.showInConsole);
-        httpPostRequest(url, json);
+        httpUtil.httpPostRequest(url, json);
     }
 
     private void performQueryResponse(String receiver, int key, JSONProperties jsonProperties) {
@@ -321,89 +319,15 @@ public class Node {
             json.put(JSONFormat.ADDRESS, address);
             json.put(JSONFormat.HOPS, jsonProperties.hops);
             json.put(JSONFormat.SHOWINCONSOLE, jsonProperties.showInConsole);
-            httpPostRequest(url, json);
+            httpUtil.httpPostRequest(url, json);
         } catch (NodeOfflineException e) {
-            System.out.println(address + " tried to connect to: " + receiver + "  but failed. Key: " + key + " (performQueryResponse)");
+            System.out.println(address + " tried to connect to: " + receiver + " but failed. Key: " + key + " (performQueryResponse)");
         }
-
-    }
-
-    private void httpPostRequest(String url, JSONObject body) throws NodeOfflineException {
-        HttpPost postMsg = new HttpPost(url);
-        try {
-            StringEntity params = new StringEntity(body.toJSONString());
-            postMsg.addHeader("content-type", JSONFormat.JSON);
-            postMsg.setEntity(params);
-            HttpResponse response = client.execute(postMsg);
-            if (response.getStatusLine().getStatusCode() != 200) {
-                System.out.println(response.getStatusLine().getStatusCode());
-                System.out.println("ERROR ERROR " + url);     //TODO ??
-            }
-        } catch (HttpHostConnectException | ConnectTimeoutException | SocketTimeoutException e) {
-            throw new NodeOfflineException();
-        } catch (UnsupportedEncodingException e) {
-            e.printStackTrace();
-        } catch (ClientProtocolException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-    private void httpPutRequest(String url, JSONObject body) throws NodeOfflineException {
-        HttpPut putMsg = new HttpPut(url);
-        try {
-            StringEntity params = new StringEntity(body.toJSONString());
-            putMsg.addHeader("content-type", JSONFormat.JSON);
-            putMsg.setEntity(params);
-            HttpResponse response = client.execute(putMsg);
-            if (response.getStatusLine().getStatusCode() != 200) {
-                System.out.println(response.getStatusLine().getStatusCode());
-                System.out.println("ERROR ERROR " + url);     //TODO ??
-            }
-        } catch (HttpHostConnectException | ConnectTimeoutException | SocketTimeoutException e) {
-            throw new NodeOfflineException();
-        } catch (UnsupportedEncodingException e) {
-            e.printStackTrace();
-        } catch (ClientProtocolException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-    private JSONObject httpGetRequest(String url) throws NodeOfflineException {
-        HttpGet getMsg = new HttpGet(url);
-        try {
-            HttpResponse response = client.execute(getMsg);
-            if (response.getStatusLine().getStatusCode() != 200) {
-                System.out.println("ERROR ERROR: Could not get");     //TODO ??
-            }
-            BufferedReader reader = new BufferedReader(
-                    new InputStreamReader(
-                            response.getEntity().getContent()));
-            String jsonstring = "";
-            String line;
-            while ((line = reader.readLine()) != null) {
-                jsonstring += line;
-            }
-            JSONParser parser = new JSONParser();
-            JSONObject json = (JSONObject) parser.parse(jsonstring);
-            return json;
-        } catch (HttpHostConnectException | ConnectTimeoutException | SocketTimeoutException e) {
-            throw new NodeOfflineException();
-        } catch (IOException e) {
-            e.printStackTrace();
-        } catch (ParseException e) {
-            e.printStackTrace();
-        }
-        return null; //TODO fix mabye?
     }
 
     public boolean isInNetwork() {
         return inNetwork;
     }
-
 
     public List<String> getAddresses() {
         return addresses;
@@ -422,12 +346,11 @@ public class Node {
     }
 
     public void handlePutResource(JSONObject json) {
-
         String address = json.get(JSONFormat.ADDRESS).toString();
         int key = generateHash(address);
         if (isMyKey(key)) {
             dataSource = new DataSource(address);
-            Runnable dataUpdateThread = () -> dataSource.updateLoop();
+            Runnable dataUpdateThread = () -> startDataSourceUpdateLoop();
             new Thread(dataUpdateThread).start();
         } else {
             //create instruction to be executed later when we receive the response on /receive
@@ -435,6 +358,46 @@ public class Node {
             instructionMap.put(key, inst);
             lookup(key, this.address, new JSONProperties("finger", 0, false)); //should never return query response
         }
+    }
+
+    private void startDataSourceUpdateLoop() {
+        while (true) {
+            try {
+                dataSource.updateData();
+                String data = dataSource.getData();
+                storage.putData(data);
+                pushDataToSuccessors(data);
+                int tenSeconds = 10000;
+                double random = Math.random() * tenSeconds;
+                System.out.println("data was updated with new value: " + data + ". Now I sleep for " + tenSeconds + random + " seconds. Zzz...");
+                Thread.sleep((long) (tenSeconds + random));
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            } catch (NodeOfflineException e) {
+                dataSource.setData("DATA NOT AVAILABLE");
+            }
+        }
+    }
+
+    private void pushDataToSuccessors(String data) {
+        for (String succAddress : successorList) {
+            String url = succAddress + "/" + ChordResource.DATABASE + "/data";
+            JSONObject body = new JSONObject();
+            body.put(JSONFormat.VALUE, data);
+            try {
+                httpUtil.httpPostRequest(url, body);
+            } catch (NodeOfflineException e) {
+                System.out.println("Tried to push data to " + url + ", but failed.");
+            }
+        }
+    }
+
+    public void upsertDatabase(String type, String value) {
+        storage.putValue(type, value);
+    }
+
+    public String getData() {
+        return storage.getData();
     }
 
     public void executeInstruction(Instruction inst, String address) {
@@ -447,10 +410,10 @@ public class Node {
                     //not handled and doesn't make sense to do here because you cant get the response
                     break;
                 case POST:
-                    httpPostRequest(url, body);
+                    httpUtil.httpPostRequest(url, body);
                     break;
                 case PUT:
-                    httpPutRequest(url, body);
+                    httpUtil.httpPutRequest(url, body);
                     break;
                 case DELETE:
                     //not handled

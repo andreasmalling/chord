@@ -26,6 +26,7 @@ public class ChordResource {
     public static final String SUCCESSORPATH = "successor";
     public static final String SUCCESSORLISTPATH = "successor/list";
     public static final String RESOURCEPATH = "resource";
+    public static final String DATABASE = "database";
 
     private Node n;
     private final JSONParser parser = new JSONParser();
@@ -62,11 +63,11 @@ public class ChordResource {
     @Consumes(JSONFormat.JSON)
     public Response setPredecessor(String jsonstring) {
 
-        JSONObject jreqeust;
+        JSONObject jRequest;
         try {
-            jreqeust = (JSONObject) parser.parse(jsonstring);
-            String type = jreqeust.get(JSONFormat.TYPE).toString();
-            String url = jreqeust.get(JSONFormat.VALUE).toString();
+            jRequest = (JSONObject) parser.parse(jsonstring);
+            String type = jRequest.get(JSONFormat.TYPE).toString();
+            String url = jRequest.get(JSONFormat.VALUE).toString();
             n.setPredecessor(url);
         } catch (ParseException e) {
             e.printStackTrace();
@@ -92,11 +93,11 @@ public class ChordResource {
     @Consumes(JSONFormat.JSON)
     public Response setSuccessor(String jsonstring) {
 
-        JSONObject jreqeust;
+        JSONObject jRequest;
         try {
-            jreqeust = (JSONObject) parser.parse(jsonstring);
-            String type = jreqeust.get(JSONFormat.TYPE).toString();
-            String url = jreqeust.get(JSONFormat.VALUE).toString();
+            jRequest = (JSONObject) parser.parse(jsonstring);
+            String type = jRequest.get(JSONFormat.TYPE).toString();
+            String url = jRequest.get(JSONFormat.VALUE).toString();
             n.setSuccessor(url);
         } catch (ParseException e) {
             e.printStackTrace();
@@ -170,7 +171,7 @@ public class ChordResource {
                     while (n.getAddresses().size() > lookupListSize) {
                         n.getAddresses().remove(n.getAddresses().size() - 1);
                     }
-                    n.getAddresses().add(0, "The address responsible for key: " + key + " is: " + address + " (took " + hops +  " hops)");
+                    n.getAddresses().add(0, "The address responsible for key: " + key + " is: " + address + " (took " + hops + " hops)");
                 }
                 n.updateFingerTable(key, address);
 
@@ -194,6 +195,21 @@ public class ChordResource {
         return Response.ok().build();
     }
 
+    @Path("database/{type}") //join if not in network, otherwise receive address for key lookup
+    @POST
+    @Consumes(JSONFormat.JSON)
+    public Response updateDatabase(String request, @PathParam("type") String type) {
+        JSONParser parser = new JSONParser();
+        try {
+            JSONObject jRequest = (JSONObject) parser.parse(request);
+            String value = jRequest.get(JSONFormat.VALUE).toString();
+            n.upsertDatabase(type, value);
+        } catch (ParseException e) {
+            e.printStackTrace();
+            return Response.status(400).build(); //Code 400: Bad Request due to malformed JSON
+        }
+        return Response.ok().build();
+    }
 
     @Path(RESOURCEPATH)
     @PUT
@@ -216,7 +232,7 @@ public class ChordResource {
     public String getResource() {
         DataSource d = n.getDataSource();
         JSONObject json = new JSONObject();
-        if (d==null) {
+        if (d == null) {
             json.put(JSONFormat.HASDATA, false);
             json.put(JSONFormat.DATA, null);
         } else {
@@ -259,10 +275,9 @@ public class ChordResource {
             this.addresses = node.getAddresses();
             this.successors = node.getSuccessorList();
             this.fingerTable = node.getFingerTable();
-            DataSource d = node.getDataSource();
-            if (d != null) {
+            this.data = node.getData();
+            if (data != null) {
                 this.hasData = true;
-                this.data = node.getDataSource().getData();
             }
         }
     }

@@ -1,5 +1,6 @@
 package org.sparkle.twilight;
 
+import org.apache.http.client.HttpClient;
 import org.glassfish.grizzly.http.server.HttpServer;
 import org.glassfish.jersey.grizzly2.httpserver.GrizzlyHttpServerFactory;
 import org.glassfish.jersey.server.ResourceConfig;
@@ -17,6 +18,7 @@ public class Main {
     public static String BASE_URI;
     public static String ENTRY_POINT;
     public static HttpServer server;
+    public static HttpUtil httpUtil;
 
     /**
      * Starts Grizzly HTTP server exposing JAX-RS resources defined in this application.
@@ -52,6 +54,7 @@ public class Main {
             //Create chord ring at port 8080
             BASE_URI = "http://localhost:8080/";
         }
+        httpUtil = new HttpUtil();
         server = startServer();
 
         System.out.println(String.format("Jersey app started with WADL available at "
