@@ -423,7 +423,6 @@ public class Node {
 
     public void handlePutResource(JSONObject json) {
         String id = json.get(JSONFormat.ID).toString();
-
         int key = generateHash(id);
         if (isMyKey(key)) {
             String accesstoken = json.get(JSONFormat.ACCESSTOKEN).toString();

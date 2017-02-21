@@ -19,6 +19,11 @@ PREDECESSOR: <a href="{{pred}}"> {{pred}} </a> <br/>
     <input type="number" name="key" placeholder="Find node with key..." min="0" max="4095"/>
     <input type="submit" value="Finger lookup"/>
 </form>
+<form action="/resource" method="post" target="nothing">
+    ID:<input type="text" name="id" value="300028000147353138383138"/>
+    ACCESSTOKEN:<input type="text" name="token" value="b4cf943eeb88b98ef17cafd76d86b557704c5c2f"/>
+    <input type="submit" value="PUT"/>
+</form>
     {{#hasData}}
         <p>Data: {{data}}</p>
         <form action={{getseturl}} method="POST" target="nothing">

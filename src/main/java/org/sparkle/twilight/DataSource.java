@@ -94,7 +94,7 @@ public class DataSource {
         while(true) {
             try {
             updateData();
-            System.out.println("data is updated with new value: " + data);
+            //System.out.println("data is updated with new value: " + data);
             int seconds = 1000;
             double random = Math.random() * seconds;
                 Thread.sleep((long) (seconds + random));
