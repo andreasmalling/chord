@@ -422,11 +422,12 @@ public class Node {
     }
 
     public void handlePutResource(JSONObject json) {
+        String id = json.get(JSONFormat.ID).toString();
 
-        String address = json.get(JSONFormat.ADDRESS).toString();
-        int key = generateHash(address);
+        int key = generateHash(id);
         if (isMyKey(key)) {
-            dataSource = new DataSource(address);
+            String accesstoken = json.get(JSONFormat.ACCESSTOKEN).toString();
+            dataSource = new DataSource(id,accesstoken);
             Runnable dataUpdateThread = () -> dataSource.updateLoop();
             new Thread(dataUpdateThread).start();
         } else {

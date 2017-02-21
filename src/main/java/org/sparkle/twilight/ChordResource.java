@@ -251,6 +251,7 @@ public class ChordResource {
         public List<Finger> fingerTable;
         public boolean hasData = false;
         public String data = "";
+        public String getseturl = "";
 
         public Context(final Node node) {
             this.id = node.getID() + "";
@@ -263,6 +264,7 @@ public class ChordResource {
             if (d != null) {
                 this.hasData = true;
                 this.data = node.getDataSource().getData();
+                this.getseturl = d.getSetUrl();
             }
         }
     }

@@ -21,7 +21,7 @@ PREDECESSOR: <a href="{{pred}}"> {{pred}} </a> <br/>
 </form>
     {{#hasData}}
         <p>Data: {{data}}</p>
-        <form action="https://api.particle.io/v1/devices/300028000147353138383138/led?access_token=b4cf943eeb88b98ef17cafd76d86b557704c5c2f" method="POST" target="nothing">
+        <form action={{getseturl}} method="POST" target="nothing">
             </br>
             <input type="radio" name="args" value="on">Turn the LED on.
             </br>

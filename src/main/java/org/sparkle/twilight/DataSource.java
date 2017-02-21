@@ -20,8 +20,8 @@ import java.net.SocketTimeoutException;
  * Created by kgoyo on 17-02-2017.
  */
 public class DataSource {
-    private String url;
-    private JSONParser parser;
+    private String getUrl;
+    private String setUrl;
     private HttpClient client;
     private String data;
 
@@ -30,8 +30,12 @@ public class DataSource {
         return data;
     }
 
-    public DataSource(String url) {
-        this.url = url;
+    public DataSource(String id,String accesstoken) {
+        //https://api.particle.io/v1/devices/300028000147353138383138/analogvalue?access_token=b4cf943eeb88b98ef17cafd76d86b557704c5c2f
+        getUrl = "https://api.particle.io/v1/devices/" + id + "/analogvalue?access_token=" + accesstoken;
+
+        //https://api.particle.io/v1/devices/300028000147353138383138/led?access_token=b4cf943eeb88b98ef17cafd76d86b557704c5c2f
+        setUrl = "https://api.particle.io/v1/devices/" + id + "/led?access_token=" + accesstoken;
 
 
         //TODO THIS SHOULD NOT BE HERE AT RELEASE!!!!!
@@ -43,7 +47,7 @@ public class DataSource {
 
     private void updateData() throws DataSourceNotAvailableException {
         try {
-            JSONObject json = httpGetRequest(url);
+            JSONObject json = httpGetRequest(getUrl);
             if (json.containsKey("result")) {
                 data = json.get("result").toString();
             } else {
@@ -91,9 +95,9 @@ public class DataSource {
             try {
             updateData();
             System.out.println("data is updated with new value: " + data);
-            int tenSeconds = 10000;
-            double random = Math.random() * tenSeconds;
-                Thread.sleep((long) (tenSeconds + random));
+            int seconds = 1000;
+            double random = Math.random() * seconds;
+                Thread.sleep((long) (seconds + random));
             } catch (InterruptedException e) {
                 e.printStackTrace();
             } catch (DataSourceNotAvailableException e) {
@@ -101,4 +105,9 @@ public class DataSource {
             }
         }
     }
+
+    public String getSetUrl() {
+        return setUrl;
+    }
+
 }
