@@ -1,6 +1,6 @@
 @echo off
 
-TITLE main
+TITLE launch
 
 SETLOCAL ENABLEDELAYEDEXPANSION
 
@@ -22,21 +22,17 @@ set /A spawntime = %2%
 IF "%~3"=="" goto sethost
 
 set /A host = %3%
-
-
-goto init
+goto spawnjoin
 
 
 
 :setjoin
-set /A spawns = 3
-
+set /A spawns = 10
 
 
 :settime
 
-set /A spawntime = 1
-
+set /A spawntime = 3
 
 
 :sethost
@@ -45,17 +41,19 @@ set /A host = 9000
 :init
 echo Spawns: %spawns%
 echo Wait: %spawntime%
-echo - - - - -
-echo Initial node available at:
+
+:spawnhost
+echo Initializing host at:
 echo %host%
 start "%host%" cmd /c "mvn exec:java '-Dexec.args=%host%'"
-
 pause
 
 
 
-echo Joining node available at:
-:joins
+:spawnjoin
+echo Joining at:
+echo %host%
+echo Initializing node at:
 
 for /l %%x in (1, 1, %spawns%) do (
 
