@@ -45,7 +45,7 @@ echo Wait: %spawntime%
 :spawnhost
 echo Initializing host at:
 echo %host%
-start "%host%" cmd /c "mvn exec:java '-Dexec.args=%host%'"
+start "%host%" cmd /c "mvn exec:java -Dexec.args='%host%'"
 pause
 
 
@@ -60,7 +60,7 @@ for /l %%x in (1, 1, %spawns%) do (
   set /A port=%host% + %%x
 
   echo !port!
-  start "!port!" cmd /c "mvn exec:java '-Dexec.args=!port! %host%'"
+  start "!port!" cmd /c "mvn exec:java "-Dexec.args=!port! %host%""
 
   timeout %spawntime% > NUL
 
