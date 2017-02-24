@@ -46,6 +46,7 @@ public class Node {
     private ConcurrentHashMap<Integer, Instruction> instructionMap;
     private final int successorListLength = 5;
     private ChordStorage storage;
+    private Thread dataUpdateThread;
 
     public Node() {
         initializeNode();
@@ -114,6 +115,20 @@ public class Node {
     public void setPredecessor(String predecessor) {
         this.predecessorId = generateHash(predecessor);
         this.predecessor = predecessor;
+        if(dataSource != null) {
+            if (predecessorId > generateHash(storage.getValue(ChordStorage.ID_KEY))){
+                JSONObject json = new JSONObject();
+                json.put(JSONFormat.ID, storage.getValue(ChordStorage.ID_KEY));
+                json.put(JSONFormat.ACCESSTOKEN, storage.getValue(ChordStorage.TOKEN_KEY));
+                try {
+                    httpUtil.httpPutRequest(predecessor+"/"+ChordResource.RESOURCEPATH, json);
+                    dataUpdateThread.interrupt();
+                } catch (NodeOfflineException e) {
+                    //TODO if node is offline try next successor
+                    e.printStackTrace();
+                }
+            }
+        }
     }
 
     public void joinRing(String address) {
@@ -242,8 +257,21 @@ public class Node {
         updateNeighbor(JSONFormat.SUCCESSOR, getSuccessor(), getPredecessor() + ChordResource.SUCCESSORPATH);
         // and set pred of succ to this node's pred
         updateNeighbor(JSONFormat.PREDECESSOR, getPredecessor(), getSuccessor() + ChordResource.PREDECESSORPATH);
+        //pass on the resource responsebillity
+        if(dataSource != null) {
+            JSONObject json = new JSONObject();
+            json.put(JSONFormat.ID, storage.getValue(ChordStorage.ID_KEY));
+            json.put(JSONFormat.ACCESSTOKEN, storage.getValue(ChordStorage.TOKEN_KEY));
+            try {
+                httpUtil.httpPutRequest(successorList.get(0)+"/"+ChordResource.RESOURCEPATH, json);
+            } catch (NodeOfflineException e) {
+                //TODO if node is offline try next successor
+                e.printStackTrace();
+            }
+        }
         storage.shutdown();
         Main.server.shutdownNow();
+        System.exit(0);
     }
 
     public void killNode() {
@@ -355,7 +383,8 @@ public class Node {
                 upsertDatabase(ChordStorage.ID_KEY, id, false);
                 upsertDatabase(ChordStorage.TOKEN_KEY, accesstoken, true);
                 Runnable dataUpdateThread = () -> startDataSourceUpdateLoop();
-                new Thread(dataUpdateThread).start();
+                this.dataUpdateThread = new Thread(dataUpdateThread);
+                this.dataUpdateThread.start();
             } else {
                 //create instruction to be executed later when we receive the response on /receive
                 Instruction inst = new Instruction(Instruction.Method.PUT, json, ChordResource.RESOURCEPATH);
@@ -366,7 +395,7 @@ public class Node {
     }
 
     private void startDataSourceUpdateLoop() {
-        while (true) {
+        while (!Thread.interrupted()) {
             try {
                 dataSource.updateData();
                 String data = dataSource.getData();
@@ -377,11 +406,12 @@ public class Node {
                 System.out.println("Data was updated with new value: " + data + ". Now I sleep for " + tenSeconds + random + " seconds. Zzz...");
                 Thread.sleep((long) (tenSeconds + random));
             } catch (InterruptedException e) {
-                e.printStackTrace();
+                dataSource = null;
             } catch (NodeOfflineException e) {
                 dataSource.setData(DataSource.DATA_NOT_AVAILABLE);
             }
         }
+        dataSource = null;
     }
 
     private void pushDataToSuccessors(String data) {

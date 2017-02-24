@@ -53,8 +53,8 @@ public class ChordStorage {
             return DataSource.DATA_NOT_AVAILABLE;
     }
 
-    public String getResource(String key) {
-        return map.get(RESOURCE_KEY).toString();
+    public String getValue(String key) {
+        return map.get(key).toString();
     }
 
     public void shutdown() {
