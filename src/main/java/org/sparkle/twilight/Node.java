@@ -115,11 +115,16 @@ public class Node {
     public void setPredecessor(String predecessor) {
         this.predecessorId = generateHash(predecessor);
         this.predecessor = predecessor;
+
+        // If we own a datasource, the predecessor (if responsible) should own source
+        String dataSourceID = storage.getValue(ChordStorage.ID_KEY);
+        String dataSourceToken = storage.getValue(ChordStorage.TOKEN_KEY);
+
         if(dataSource != null) {
-            if (predecessorId > generateHash(storage.getValue(ChordStorage.ID_KEY))){
+            if (predecessorId > generateHash(dataSourceID)){
                 JSONObject json = new JSONObject();
-                json.put(JSONFormat.ID, storage.getValue(ChordStorage.ID_KEY));
-                json.put(JSONFormat.ACCESSTOKEN, storage.getValue(ChordStorage.TOKEN_KEY));
+                json.put(JSONFormat.ID, dataSourceID);
+                json.put(JSONFormat.ACCESSTOKEN, dataSourceToken);
                 try {
                     httpUtil.httpPutRequest(predecessor+"/"+ChordResource.RESOURCEPATH, json);
                     dataUpdateThread.interrupt();
@@ -128,6 +133,11 @@ public class Node {
                     e.printStackTrace();
                 }
             }
+        }
+
+        // Should we take responsiblity for resource, due to improper leave?
+        if (predecessorId < generateHash(dataSourceID)) {
+            initDataSource(dataSourceID, dataSourceToken);
         }
     }
 
@@ -379,12 +389,7 @@ public class Node {
             int key = generateHash(id);
             if (isMyKey(key)) {
                 String accesstoken = json.get(JSONFormat.ACCESSTOKEN).toString();
-                dataSource = new DataSource(id,accesstoken);
-                upsertDatabase(ChordStorage.ID_KEY, id, false);
-                upsertDatabase(ChordStorage.TOKEN_KEY, accesstoken, true);
-                Runnable dataUpdateThread = () -> startDataSourceUpdateLoop();
-                this.dataUpdateThread = new Thread(dataUpdateThread);
-                this.dataUpdateThread.start();
+                initDataSource(id, accesstoken);
             } else {
                 //create instruction to be executed later when we receive the response on /receive
                 Instruction inst = new Instruction(Instruction.Method.PUT, json, ChordResource.RESOURCEPATH);
@@ -392,6 +397,15 @@ public class Node {
                 lookup(key, this.address, new JSONProperties("finger", 0, false)); //should never return query response
             }
         }
+    }
+
+    private void initDataSource(String id, String accesstoken) {
+        dataSource = new DataSource(id,accesstoken);
+        upsertDatabase(ChordStorage.ID_KEY, id, false);
+        upsertDatabase(ChordStorage.TOKEN_KEY, accesstoken, true);
+        Runnable dataUpdateThread = () -> startDataSourceUpdateLoop();
+        this.dataUpdateThread = new Thread(dataUpdateThread);
+        this.dataUpdateThread.start();
     }
 
     private void startDataSourceUpdateLoop() {
