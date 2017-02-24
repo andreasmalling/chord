@@ -42,7 +42,10 @@ public class ChordStorage {
     }
 
     public String getData() {
-        return map.get(DATA_KEY).toString();
+        if(map.containsKey(DATA_KEY)) {
+            return map.get(DATA_KEY).toString();
+        } else
+            return "DATA NOT AVAILABLE";
     }
 
     public String getResource(String key) {

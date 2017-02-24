@@ -276,7 +276,7 @@ public class ChordResource {
             this.successors = node.getSuccessorList();
             this.fingerTable = node.getFingerTable();
             this.data = node.getData();
-            if (data != null) {
+            if (this.data != null) {
                 this.hasData = true;
             }
         }
