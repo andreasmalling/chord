@@ -346,11 +346,12 @@ public class Node {
     }
 
     public void handlePutResource(JSONObject json) {
-        String address = json.get(JSONFormat.ADDRESS).toString();
-        int key = generateHash(address);
+        String id = json.get(JSONFormat.ID).toString();
+        int key = generateHash(id);
         if (isMyKey(key)) {
-            dataSource = new DataSource(address);
-            Runnable dataUpdateThread = () -> startDataSourceUpdateLoop();
+            String accesstoken = json.get(JSONFormat.ACCESSTOKEN).toString();
+            dataSource = new DataSource(id,accesstoken);
+            Runnable dataUpdateThread = () -> dataSource.updateLoop();
             new Thread(dataUpdateThread).start();
         } else {
             //create instruction to be executed later when we receive the response on /receive

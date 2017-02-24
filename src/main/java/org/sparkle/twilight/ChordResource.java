@@ -212,6 +212,20 @@ public class ChordResource {
     }
 
     @Path(RESOURCEPATH)
+    @POST
+    @Consumes("application/x-www-form-urlencoded")
+    public Response putResourceWeb(@FormParam("id") String id, @FormParam("token") String token) {
+
+        JSONObject jRequest = new JSONObject();
+        jRequest.put(JSONFormat.ID,id);
+        jRequest.put(JSONFormat.ACCESSTOKEN,token);
+        Runnable putResourceThread = () -> n.handlePutResource(jRequest);
+        new Thread(putResourceThread).start();
+        return Response.ok().build();
+    }
+
+
+    @Path(RESOURCEPATH)
     @PUT
     @Consumes(JSONFormat.JSON)
     public Response putResource(String request) {
@@ -267,6 +281,7 @@ public class ChordResource {
         public List<Finger> fingerTable;
         public boolean hasData = false;
         public String data = "";
+        public String getseturl = "";
 
         public Context(final Node node) {
             this.id = node.getID() + "";
@@ -276,8 +291,10 @@ public class ChordResource {
             this.successors = node.getSuccessorList();
             this.fingerTable = node.getFingerTable();
             this.data = node.getData();
+            //TODO FIX THIS
             if (this.data != null) {
                 this.hasData = true;
+                this.getseturl = d.getSetUrl();
             }
         }
     }
