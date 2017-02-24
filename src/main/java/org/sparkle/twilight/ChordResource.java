@@ -203,7 +203,7 @@ public class ChordResource {
         try {
             JSONObject jRequest = (JSONObject) parser.parse(request);
             String value = jRequest.get(JSONFormat.VALUE).toString();
-            n.upsertDatabase(type, value);
+            n.upsertDatabase(type, value, true);
         } catch (ParseException e) {
             e.printStackTrace();
             return Response.status(400).build(); //Code 400: Bad Request due to malformed JSON
@@ -282,6 +282,7 @@ public class ChordResource {
         public boolean hasData = false;
         public String data = "";
         public String getseturl = "";
+        public boolean hasDataForm;
 
         public Context(final Node node) {
             this.id = node.getID() + "";
@@ -291,10 +292,13 @@ public class ChordResource {
             this.successors = node.getSuccessorList();
             this.fingerTable = node.getFingerTable();
             this.data = node.getData();
-            //TODO FIX THIS
-            if (this.data != null) {
+            if (!this.data.equals(DataSource.DATA_NOT_AVAILABLE)) {
                 this.hasData = true;
-                this.getseturl = d.getSetUrl();
+                DataSource dataSource = node.getDataSource();
+                if (dataSource != null) {
+                    this.hasDataForm = true;
+                    this.getseturl = dataSource.getSetUrl();
+                }
             }
         }
     }

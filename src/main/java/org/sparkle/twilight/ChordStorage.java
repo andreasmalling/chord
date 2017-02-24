@@ -14,11 +14,15 @@ public class ChordStorage {
 
     private DB db;
     private ConcurrentMap map;
-    private final String DATA_KEY = "data";
-    private final String RESOURCE_KEY = "resource";
+    public static final String DATA_KEY = "data";
+    public static final String RESOURCE_KEY = "resource";
+    public static final String ID_KEY = "id";
+    public static final String TOKEN_KEY = "token";
 
     public ChordStorage(String node_id) {
-        File file = new File(node_id);
+        File dir = new File("db/");
+        dir.mkdirs();
+        File file = new File("db/" + node_id);
         db = DBMaker.fileDB(file)
                 .transactionEnable()
                 .make();
@@ -36,23 +40,25 @@ public class ChordStorage {
         db.commit();
     }
 
-    public void putValue(String type, String value) {
-        map.put(type, value);
-        db.commit();
+    public void putValue(String key, String value, boolean commit) {
+        map.put(key, value);
+        if (commit) {
+            db.commit();
+        }
     }
 
     public String getData() {
-        if(map.containsKey(DATA_KEY)) {
+        if (map.containsKey(DATA_KEY)) {
             return map.get(DATA_KEY).toString();
         } else
-            return "DATA NOT AVAILABLE";
+            return DataSource.DATA_NOT_AVAILABLE;
     }
 
     public String getResource(String key) {
         return map.get(RESOURCE_KEY).toString();
     }
 
-    public void shutdown(){
+    public void shutdown() {
         db.close();
     }
 }

@@ -346,18 +346,22 @@ public class Node {
     }
 
     public void handlePutResource(JSONObject json) {
-        String id = json.get(JSONFormat.ID).toString();
-        int key = generateHash(id);
-        if (isMyKey(key)) {
-            String accesstoken = json.get(JSONFormat.ACCESSTOKEN).toString();
-            dataSource = new DataSource(id,accesstoken);
-            Runnable dataUpdateThread = () -> dataSource.updateLoop();
-            new Thread(dataUpdateThread).start();
-        } else {
-            //create instruction to be executed later when we receive the response on /receive
-            Instruction inst = new Instruction(Instruction.Method.PUT, json, ChordResource.RESOURCEPATH);
-            instructionMap.put(key, inst);
-            lookup(key, this.address, new JSONProperties("finger", 0, false)); //should never return query response
+        if (dataSource == null) {
+            String id = json.get(JSONFormat.ID).toString();
+            int key = generateHash(id);
+            if (isMyKey(key)) {
+                String accesstoken = json.get(JSONFormat.ACCESSTOKEN).toString();
+                dataSource = new DataSource(id,accesstoken);
+                upsertDatabase(ChordStorage.ID_KEY, id, false);
+                upsertDatabase(ChordStorage.TOKEN_KEY, accesstoken, true);
+                Runnable dataUpdateThread = () -> startDataSourceUpdateLoop();
+                new Thread(dataUpdateThread).start();
+            } else {
+                //create instruction to be executed later when we receive the response on /receive
+                Instruction inst = new Instruction(Instruction.Method.PUT, json, ChordResource.RESOURCEPATH);
+                instructionMap.put(key, inst);
+                lookup(key, this.address, new JSONProperties("finger", 0, false)); //should never return query response
+            }
         }
     }
 
@@ -370,12 +374,12 @@ public class Node {
                 pushDataToSuccessors(data);
                 int tenSeconds = 10000;
                 double random = Math.random() * tenSeconds;
-                System.out.println("data was updated with new value: " + data + ". Now I sleep for " + tenSeconds + random + " seconds. Zzz...");
+                System.out.println("Data was updated with new value: " + data + ". Now I sleep for " + tenSeconds + random + " seconds. Zzz...");
                 Thread.sleep((long) (tenSeconds + random));
             } catch (InterruptedException e) {
                 e.printStackTrace();
             } catch (NodeOfflineException e) {
-                dataSource.setData("DATA NOT AVAILABLE");
+                dataSource.setData(DataSource.DATA_NOT_AVAILABLE);
             }
         }
     }
@@ -393,8 +397,8 @@ public class Node {
         }
     }
 
-    public void upsertDatabase(String type, String value) {
-        storage.putValue(type, value);
+    public void upsertDatabase(String type, String value, boolean commit) {
+        storage.putValue(type, value, commit);
     }
 
     public String getData() {

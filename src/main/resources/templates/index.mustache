@@ -24,8 +24,9 @@ PREDECESSOR: <a href="{{pred}}"> {{pred}} </a> <br/>
     ACCESSTOKEN:<input type="text" name="token" value="b4cf943eeb88b98ef17cafd76d86b557704c5c2f"/>
     <input type="submit" value="PUT"/>
 </form>
-    {{#hasData}}
-        <p>Data: {{data}}</p>
+{{#hasData}}
+    <p>Data: {{data}}</p>
+    {{#hasDataForm}}
         <form action={{getseturl}} method="POST" target="nothing">
             </br>
             <input type="radio" name="args" value="on">Turn the LED on.
@@ -34,8 +35,8 @@ PREDECESSOR: <a href="{{pred}}"> {{pred}} </a> <br/>
             </br>
             <input type="submit" value="Do it!">
         </form>
-
-    {{/hasData}}
+    {{/hasDataForm}}
+{{/hasData}}
 </div>
 <div style="height: 300px;">
     <div style="float: left; width: 25%; margin-left: 25%; text-align: left;">
