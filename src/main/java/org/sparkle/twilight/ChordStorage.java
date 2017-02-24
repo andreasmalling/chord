@@ -20,9 +20,8 @@ public class ChordStorage {
     public static final String TOKEN_KEY = "token";
 
     public ChordStorage(String node_id) {
-        File dir = new File("db/");
-        dir.mkdirs();
         File file = new File("db/" + node_id);
+        file.getParentFile().mkdirs();
         db = DBMaker.fileDB(file)
                 .transactionEnable()
                 .make();
