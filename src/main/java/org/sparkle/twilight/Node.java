@@ -117,27 +117,32 @@ public class Node {
         this.predecessor = predecessor;
 
         // If we own a datasource, the predecessor (if responsible) should own source
-        String dataSourceID = storage.getValue(ChordStorage.ID_KEY);
-        String dataSourceToken = storage.getValue(ChordStorage.TOKEN_KEY);
+        try {
+            String dataSourceID = storage.getValue(ChordStorage.ID_KEY);
+            String dataSourceToken = storage.getValue(ChordStorage.TOKEN_KEY);
 
-        if(dataSource != null) {
-            if (predecessorId > generateHash(dataSourceID)){
-                JSONObject json = new JSONObject();
-                json.put(JSONFormat.ID, dataSourceID);
-                json.put(JSONFormat.ACCESSTOKEN, dataSourceToken);
-                try {
-                    httpUtil.httpPutRequest(predecessor+"/"+ChordResource.RESOURCEPATH, json);
-                    dataUpdateThread.interrupt();
-                } catch (NodeOfflineException e) {
-                    //TODO if node is offline try next successor
-                    e.printStackTrace();
+            if(dataSource != null) {
+                if (predecessorId > generateHash(dataSourceID)){
+                    JSONObject json = new JSONObject();
+                    json.put(JSONFormat.ID, dataSourceID);
+                    json.put(JSONFormat.ACCESSTOKEN, dataSourceToken);
+                    try {
+                        httpUtil.httpPutRequest(predecessor+"/"+ChordResource.RESOURCEPATH, json);
+                        dataUpdateThread.interrupt();
+                    } catch (NodeOfflineException e) {
+                        //TODO if node is offline try next successor
+                        e.printStackTrace();
+                    }
                 }
             }
-        }
 
-        // Should we take responsiblity for resource, due to improper leave?
-        if (predecessorId < generateHash(dataSourceID)) {
-            initDataSource(dataSourceID, dataSourceToken);
+            // Should we take responsiblity for resource, due to improper leave?
+            if (isMyKey(generateHash(dataSourceID))) {
+                System.out.println("Take on responsibility of resource");
+                initDataSource(dataSourceID, dataSourceToken);
+            }
+        } catch (NoValueException e) {
+            System.out.println("No Value");
         }
     }
 
@@ -193,6 +198,8 @@ public class Node {
         }
         CopyOnWriteArrayList<String> tempSuccList = new CopyOnWriteArrayList<>();
         boolean self = false;
+        boolean updated = false;
+
         List<String> succList = successorList;
         for (int i = 0; i < successorListLength; i++) {
             if (self) {
@@ -212,15 +219,27 @@ public class Node {
                     break;
                 } catch (NodeOfflineException e) {
                     //Node does not respond, so we connect to the next in the successor list
+                    updated = true;
                     continue;
                 }
             }
         }
+
+        if (updated && dataSource != null) {
+            try {
+                pushResourceToSuccessors(storage.getValue(ChordStorage.ID_KEY), storage.getValue(ChordStorage.TOKEN_KEY));
+            } catch (NoValueException e) {
+                System.out.println("No value");
+            }
+        }
+        updated = false;
+
         String freshSucc = tempSuccList.get(0);
         if (!getSuccessor().equals(freshSucc)) {
             //update succ.pred
             updateNeighbor(JSONFormat.PREDECESSOR, this.address, freshSucc + ChordResource.PREDECESSORPATH);
         }
+
         successorList = tempSuccList;
     }
 
@@ -270,12 +289,15 @@ public class Node {
         //pass on the resource responsebillity
         if(dataSource != null) {
             JSONObject json = new JSONObject();
-            json.put(JSONFormat.ID, storage.getValue(ChordStorage.ID_KEY));
-            json.put(JSONFormat.ACCESSTOKEN, storage.getValue(ChordStorage.TOKEN_KEY));
             try {
+                json.put(JSONFormat.ID, storage.getValue(ChordStorage.ID_KEY));
+                json.put(JSONFormat.ACCESSTOKEN, storage.getValue(ChordStorage.TOKEN_KEY));
                 httpUtil.httpPutRequest(successorList.get(0)+"/"+ChordResource.RESOURCEPATH, json);
             } catch (NodeOfflineException e) {
                 //TODO if node is offline try next successor
+                e.printStackTrace();
+            } catch (NoValueException e) {
+                // Should never happen
                 e.printStackTrace();
             }
         }
@@ -403,6 +425,7 @@ public class Node {
         dataSource = new DataSource(id,accesstoken);
         upsertDatabase(ChordStorage.ID_KEY, id, false);
         upsertDatabase(ChordStorage.TOKEN_KEY, accesstoken, true);
+        pushResourceToSuccessors(id, accesstoken);
         Runnable dataUpdateThread = () -> startDataSourceUpdateLoop();
         this.dataUpdateThread = new Thread(dataUpdateThread);
         this.dataUpdateThread.start();
@@ -428,9 +451,27 @@ public class Node {
         dataSource = null;
     }
 
+    private void pushResourceToSuccessors(String id, String token) {
+        for (String succAddress : successorList) {
+            String url = succAddress + ChordResource.DATABASE + "/id";
+            JSONObject bodyID = new JSONObject();
+            bodyID.put(JSONFormat.VALUE, id);
+
+            String urlToken = succAddress + ChordResource.DATABASE + "/token";
+            JSONObject bodyToken = new JSONObject();
+            bodyToken.put(JSONFormat.VALUE, token);
+            try {
+                httpUtil.httpPostRequest(url, bodyID);
+                httpUtil.httpPostRequest(urlToken, bodyToken);
+            } catch (NodeOfflineException e) {
+                System.out.println("Tried to push data to " + url + ", but failed.");
+            }
+        }
+    }
+
     private void pushDataToSuccessors(String data) {
         for (String succAddress : successorList) {
-            String url = succAddress + "/" + ChordResource.DATABASE + "/data";
+            String url = succAddress + ChordResource.DATABASE + "/data";
             JSONObject body = new JSONObject();
             body.put(JSONFormat.VALUE, data);
             try {

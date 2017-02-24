@@ -53,8 +53,12 @@ public class ChordStorage {
             return DataSource.DATA_NOT_AVAILABLE;
     }
 
-    public String getValue(String key) {
-        return map.get(key).toString();
+    public String getValue(String key) throws NoValueException {
+
+        if(map.containsKey(key))
+            return map.get(key).toString();
+        else
+            throw new NoValueException();
     }
 
     public void shutdown() {
