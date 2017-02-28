@@ -121,8 +121,8 @@ public class Node {
             String dataSourceID = storage.getValue(ChordStorage.ID_KEY);
             String dataSourceToken = storage.getValue(ChordStorage.TOKEN_KEY);
 
-            if(dataSource != null) {
-                if (predecessorId > generateHash(dataSourceID)){
+            if (dataSource != null) {
+                if (predecessorId > generateHash(dataSourceID)) {
                     JSONObject json = new JSONObject();
                     json.put(JSONFormat.ID, dataSourceID);
                     json.put(JSONFormat.ACCESSTOKEN, dataSourceToken);
@@ -133,7 +133,7 @@ public class Node {
                         jsonArray.addAll(storage.getDataList());
                         String data = jsonArray.toJSONString();
                         pushDataToSuccessors(urllist, data);
-                        httpUtil.httpPutRequest(predecessor+"/"+ChordResource.RESOURCEPATH, json);
+                        httpUtil.httpPutRequest(predecessor + "/" + ChordResource.RESOURCEPATH, json);
                         dataUpdateThread.interrupt();
                     } catch (NodeOfflineException e) {
                         //TODO if node is offline try next successor
@@ -144,8 +144,10 @@ public class Node {
 
             // Should we take responsiblity for resource, due to improper leave?
             if (isMyKey(generateHash(dataSourceID))) {
-                System.out.println("Take on responsibility of resource");
-                initDataSource(dataSourceID, dataSourceToken);
+                if (dataSource == null) {
+                    System.out.println("Take on responsibility of resource");
+                    initDataSource(dataSourceID, dataSourceToken);
+                }
             }
         } catch (NoValueException e) {
             System.out.println("No Value");
@@ -246,7 +248,7 @@ public class Node {
             updateNeighbor(JSONFormat.PREDECESSOR, this.address, freshSucc + ChordResource.PREDECESSORPATH);
         }
 
-        if(!successorList.equals(tempSuccList)){
+        if (!successorList.equals(tempSuccList)) {
             // Create new list with updated successors
             ArrayList<String> broadcastDataSetList = new ArrayList<>(tempSuccList);
             broadcastDataSetList.removeAll(successorList);
@@ -268,7 +270,6 @@ public class Node {
             if (first) {
                 fingerTable.add(new Finger(lookupID, null));
             } else {
-                // TODO: Czech successors
                 try {
                     performLookup(getSuccessor(), lookupID, address, new JSONProperties("linear", 0, false));
                 } catch (NodeOfflineException e) {
@@ -304,13 +305,13 @@ public class Node {
         updateNeighbor(JSONFormat.SUCCESSOR, getSuccessor(), getPredecessor() + ChordResource.SUCCESSORPATH);
         // and set pred of succ to this node's pred
         updateNeighbor(JSONFormat.PREDECESSOR, getPredecessor(), getSuccessor() + ChordResource.PREDECESSORPATH);
-        //pass on the resource responsebillity
-        if(dataSource != null) {
+        //pass on the resource responsibillity
+        if (dataSource != null) {
             JSONObject json = new JSONObject();
             try {
                 json.put(JSONFormat.ID, storage.getValue(ChordStorage.ID_KEY));
                 json.put(JSONFormat.ACCESSTOKEN, storage.getValue(ChordStorage.TOKEN_KEY));
-                httpUtil.httpPutRequest(successorList.get(0)+"/"+ChordResource.RESOURCEPATH, json);
+                httpUtil.httpPutRequest(successorList.get(0) + "/" + ChordResource.RESOURCEPATH, json);
             } catch (NodeOfflineException e) {
                 //TODO if node is offline try next successor
                 e.printStackTrace();
@@ -320,6 +321,7 @@ public class Node {
             }
         }
         storage.shutdown();
+        dataUpdateThread.interrupt();
         Main.server.shutdownNow();
         System.exit(0);
     }
@@ -440,7 +442,7 @@ public class Node {
     }
 
     private void initDataSource(String id, String accesstoken) {
-        dataSource = new DataSource(id,accesstoken);
+        dataSource = new DataSource(id, accesstoken);
         upsertDatabase(ChordStorage.ID_KEY, id, false);
         upsertDatabase(ChordStorage.TOKEN_KEY, accesstoken, true);
         pushResourceToSuccessors(id, accesstoken);
@@ -456,10 +458,10 @@ public class Node {
                     dataSource.updateData();
                     String data = dataSource.getData();
                     storage.putData(data);
-                    pushDataToSuccessors(successorList,data);
+                    pushDataToSuccessors(successorList, data);
                     int sleepTime = 2000;
                     double random = Math.random() * sleepTime;
-                    System.out.println("Data was updated with new value: " + data + ". Now I sleep for " + sleepTime + random + " seconds. Zzz...");
+                    System.out.println("Data was updated with new value: " + data + ". Now I sleep for " + (sleepTime + random) / 1000 + " seconds. Zzz...");
                     Thread.sleep((long) (sleepTime + random));
                 } else {
                     return;
@@ -491,9 +493,11 @@ public class Node {
         }
     }
 
-    private void pushDataToSuccessors( List<String> successorList , String data) {
+    private void pushDataToSuccessors(List<String> successorList, String data) {
         for (String succAddress : successorList) {
-            if (succAddress.equals(address)) {break;}
+            if (succAddress.equals(address)) {
+                break;
+            }
             String url = succAddress + ChordResource.DATABASE + "/data";
             JSONObject body = new JSONObject();
             body.put(JSONFormat.VALUE, data);
@@ -509,6 +513,7 @@ public class Node {
     public void upsertDatabase(String type, String value, boolean commit) {
         storage.putValue(type, value, commit);
     }
+
     public void overwriteData(ArrayList<String> value) {
         storage.putData(value);
     }

@@ -224,7 +224,7 @@ public class ChordResource {
         return Response.ok().build();
     }
 
-    @Path(DATABASE) //join if not in network, otherwise receive address for key lookup
+    @Path(DATABASE)
     @GET
     @Produces("text/plain")
     public String dumpDatabase() {

@@ -54,7 +54,7 @@ public class HttpUtil {
             HttpResponse response = client.execute(msgType);
             if (response.getStatusLine().getStatusCode() != 200) {
                 System.out.println(response.getStatusLine().getStatusCode());
-                System.out.println("ERROR ERROR " + url);     //TODO ??
+                System.out.println("ERROR ERROR " + url);
             }
         } catch (HttpHostConnectException | ConnectTimeoutException | SocketTimeoutException e) {
             throw new NodeOfflineException();
@@ -72,7 +72,7 @@ public class HttpUtil {
         try {
             HttpResponse response = client.execute(getMsg);
             if (response.getStatusLine().getStatusCode() != 200) {
-                System.out.println("ERROR ERROR: Could not get");     //TODO ??
+                System.out.println("ERROR ERROR: Could not get");
             }
             BufferedReader reader = new BufferedReader(
                     new InputStreamReader(
