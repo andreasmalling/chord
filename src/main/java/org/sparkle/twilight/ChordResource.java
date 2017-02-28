@@ -206,7 +206,7 @@ public class ChordResource {
         try {
         JSONObject jRequest = (JSONObject) parser.parse(request);
             if(type.equals(ChordStorage.DATA_KEY)){
-                Object value = jRequest.get(JSONFormat.VALUE);
+                Object value = parser.parse(jRequest.get(JSONFormat.VALUE).toString());
                 if (value instanceof JSONArray) {
                     ArrayList<String> data = new ArrayList<String>((JSONArray) value);
                     n.overwriteData(data);

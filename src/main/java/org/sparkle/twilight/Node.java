@@ -127,6 +127,12 @@ public class Node {
                     json.put(JSONFormat.ID, dataSourceID);
                     json.put(JSONFormat.ACCESSTOKEN, dataSourceToken);
                     try {
+                        ArrayList<String> urllist = new ArrayList<String>();
+                        urllist.add(0, this.predecessor);
+                        JSONArray jsonArray = new JSONArray();
+                        jsonArray.addAll(storage.getDataList());
+                        String data = jsonArray.toJSONString();
+                        pushDataToSuccessors(urllist, data);
                         httpUtil.httpPutRequest(predecessor+"/"+ChordResource.RESOURCEPATH, json);
                         dataUpdateThread.interrupt();
                     } catch (NodeOfflineException e) {
@@ -240,7 +246,19 @@ public class Node {
             updateNeighbor(JSONFormat.PREDECESSOR, this.address, freshSucc + ChordResource.PREDECESSORPATH);
         }
 
-        successorList = tempSuccList;
+        if(!successorList.equals(tempSuccList)){
+            // Create new list with updated successors
+            ArrayList<String> broadcastDataSetList = new ArrayList<>(tempSuccList);
+            broadcastDataSetList.removeAll(successorList);
+
+            JSONArray jsonArray = new JSONArray();
+            jsonArray.addAll(storage.getDataList());
+            String data = jsonArray.toJSONString();
+            pushDataToSuccessors(broadcastDataSetList, data);
+
+            // Set new successorlist
+            successorList = tempSuccList;
+        }
     }
 
     private void upsertFingerTable(boolean first) {
@@ -434,14 +452,18 @@ public class Node {
     private void startDataSourceUpdateLoop() {
         while (!Thread.interrupted()) {
             try {
-                dataSource.updateData();
-                String data = dataSource.getData();
-                storage.putData(data);
-                pushDataToSuccessors(data);
-                int sleepTime = 2000;
-                double random = Math.random() * sleepTime;
-                System.out.println("Data was updated with new value: " + data + ". Now I sleep for " + sleepTime + random + " seconds. Zzz...");
-                Thread.sleep((long) (sleepTime + random));
+                if (dataSource != null) {
+                    dataSource.updateData();
+                    String data = dataSource.getData();
+                    storage.putData(data);
+                    pushDataToSuccessors(successorList,data);
+                    int sleepTime = 2000;
+                    double random = Math.random() * sleepTime;
+                    System.out.println("Data was updated with new value: " + data + ". Now I sleep for " + sleepTime + random + " seconds. Zzz...");
+                    Thread.sleep((long) (sleepTime + random));
+                } else {
+                    return;
+                }
             } catch (InterruptedException e) {
                 dataSource = null;
             } catch (NodeOfflineException e) {
@@ -469,7 +491,7 @@ public class Node {
         }
     }
 
-    private void pushDataToSuccessors(String data) {
+    private void pushDataToSuccessors( List<String> successorList , String data) {
         for (String succAddress : successorList) {
             if (succAddress.equals(address)) {break;}
             String url = succAddress + ChordResource.DATABASE + "/data";
@@ -482,6 +504,7 @@ public class Node {
             }
         }
     }
+
 
     public void upsertDatabase(String type, String value, boolean commit) {
         storage.putValue(type, value, commit);
