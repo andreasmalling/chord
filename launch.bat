@@ -5,7 +5,9 @@ TITLE launch
 SETLOCAL ENABLEDELAYEDEXPANSION
 
 
+del /q "db\*.*"
 
+start /b /wait cmd /c "mvn clean" & start /b /wait cmd /c "mvn compile"
 :checkargs
 
 IF "%~1"=="" goto setjoin
