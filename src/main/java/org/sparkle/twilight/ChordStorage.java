@@ -27,7 +27,6 @@ public class ChordStorage {
         db = DBMaker.fileDB(file)
                 .transactionEnable()
                 .make();
-        //TODO INCLUDE DATA HISTORY, and not just latest in map
         map = db.hashMap("map").createOrOpen();
     }
 

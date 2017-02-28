@@ -1,27 +1,9 @@
 package org.sparkle.twilight;
 
 import org.apache.commons.codec.digest.DigestUtils;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.ClientProtocolException;
-import org.apache.http.client.HttpClient;
-import org.apache.http.client.config.RequestConfig;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.client.methods.HttpPut;
-import org.apache.http.conn.ConnectTimeoutException;
-import org.apache.http.conn.HttpHostConnectException;
-import org.apache.http.entity.StringEntity;
-import org.apache.http.impl.client.HttpClientBuilder;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
-import org.json.simple.parser.JSONParser;
-import org.json.simple.parser.ParseException;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.UnsupportedEncodingException;
-import java.net.SocketTimeoutException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
@@ -127,12 +109,12 @@ public class Node {
                     json.put(JSONFormat.ID, dataSourceID);
                     json.put(JSONFormat.ACCESSTOKEN, dataSourceToken);
                     try {
-                        ArrayList<String> urllist = new ArrayList<String>();
+                        ArrayList<String> urllist = new ArrayList<>();
                         urllist.add(0, this.predecessor);
                         JSONArray jsonArray = new JSONArray();
                         jsonArray.addAll(storage.getDataList());
                         String data = jsonArray.toJSONString();
-                        pushDataToSuccessors(urllist, data);
+                        pushDataToNodes(urllist, data);
                         httpUtil.httpPutRequest(predecessor + "/" + ChordResource.RESOURCEPATH, json);
                         dataUpdateThread.interrupt();
                     } catch (NodeOfflineException e) {
@@ -179,14 +161,14 @@ public class Node {
 
     private void maintainLists() {
         while (inNetwork) {
-            int tenSeconds = 10000;
-            double random = Math.random() * tenSeconds;
+            int sleepTime = 5000;
+            double random = Math.random() * sleepTime;
             try {
-                System.out.println("I'm sleeping for " + (tenSeconds + random) / 1000 + " seconds... Zzz");
-                Thread.sleep((long) (tenSeconds + random));
+                System.out.println("I'm sleeping for " + (sleepTime + random) / 1000 + " seconds... Zzz");
+                Thread.sleep((long) (sleepTime + random));
                 upsertFingerTable(false);
-                System.out.println("Done upserting fingerblasters bois, back to sleep for " + (tenSeconds + random) / 1000 + " seconds... Zzz");
-                Thread.sleep((long) (tenSeconds + random));
+                System.out.println("Done upserting fingerblasters bois, back to sleep for " + (sleepTime + random) / 1000 + " seconds... Zzz");
+                Thread.sleep((long) (sleepTime + random));
                 System.out.println("I'm awake! Let's update some successors!");
                 upsertSuccessorList();
                 System.out.println("Done upserting succs bois, back to sleep.");
@@ -256,7 +238,7 @@ public class Node {
             JSONArray jsonArray = new JSONArray();
             jsonArray.addAll(storage.getDataList());
             String data = jsonArray.toJSONString();
-            pushDataToSuccessors(broadcastDataSetList, data);
+            pushDataToNodes(broadcastDataSetList, data);
 
             // Set new successorlist
             successorList = tempSuccList;
@@ -344,6 +326,7 @@ public class Node {
                     performLookup(getSuccessor(), key, initiator, jsonProperties);
                 } catch (NodeOfflineException e) {
                     System.out.println("Linear node lookup on " + getSuccessor() + " failed. initiator: " + initiator + " currentSender: " + address);
+                    upsertSuccessorList();
                 }
             } else {
                 //finger table lookup
@@ -351,7 +334,7 @@ public class Node {
                 Finger lookupFinger = fingerTable.get(0);
                 for (Finger finger : fingerTable) {
                     int fingerModID = (finger.getId() - id) % IDSPACE;
-                    if (fingerModID >= lookupModKey) {
+                    if (fingerModID > lookupModKey) {
                         break;
                     }
                     lookupFinger = finger;
@@ -359,7 +342,8 @@ public class Node {
                 try {
                     performLookup(lookupFinger.getAddress(), key, initiator, jsonProperties);
                 } catch (NodeOfflineException e) {
-                    System.out.println("Fingertable node lookup on " + getSuccessor() + " failed. initiator: " + initiator + " currentSender: " + address);
+                    System.out.println("Fingertable node lookup on " + lookupFinger.getAddress() + " failed. initiator: " + initiator + " currentSender: " + address);
+                    upsertFingerTable(false);
                 }
 
             }
@@ -458,7 +442,7 @@ public class Node {
                     dataSource.updateData();
                     String data = dataSource.getData();
                     storage.putData(data);
-                    pushDataToSuccessors(successorList, data);
+                    pushDataToNodes(successorList, data);
                     int sleepTime = 2000;
                     double random = Math.random() * sleepTime;
                     System.out.println("Data was updated with new value: " + data + ". Now I sleep for " + (sleepTime + random) / 1000 + " seconds. Zzz...");
@@ -489,11 +473,12 @@ public class Node {
                 httpUtil.httpPostRequest(urlToken, bodyToken);
             } catch (NodeOfflineException e) {
                 System.out.println("Tried to push data to " + url + ", but failed.");
+                upsertSuccessorList();
             }
         }
     }
 
-    private void pushDataToSuccessors(List<String> successorList, String data) {
+    private void pushDataToNodes(List<String> successorList, String data) {
         for (String succAddress : successorList) {
             if (succAddress.equals(address)) {
                 break;
