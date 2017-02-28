@@ -2,6 +2,7 @@ package org.sparkle.twilight;
 
 import org.glassfish.hk2.api.Immediate;
 import org.glassfish.jersey.server.mvc.Template;
+import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
@@ -9,8 +10,10 @@ import org.json.simple.parser.ParseException;
 import javax.ws.rs.*;
 import javax.ws.rs.core.Response;
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * Root resource
@@ -201,14 +204,31 @@ public class ChordResource {
     public Response updateDatabase(String request, @PathParam("type") String type) {
         JSONParser parser = new JSONParser();
         try {
-            JSONObject jRequest = (JSONObject) parser.parse(request);
-            String value = jRequest.get(JSONFormat.VALUE).toString();
-            n.upsertDatabase(type, value, true);
+        JSONObject jRequest = (JSONObject) parser.parse(request);
+            if(type.equals(ChordStorage.DATA_KEY)){
+                Object value = jRequest.get(JSONFormat.VALUE);
+                if (value instanceof JSONArray) {
+                    ArrayList<String> data = new ArrayList<String>((JSONArray) value);
+                    n.overwriteData(data);
+                } else {
+                    n.upsertDatabase(type, value.toString(), true);
+                }
+            } else {
+                String value = jRequest.get(JSONFormat.VALUE).toString();
+                n.upsertDatabase(type, value, true);
+            }
         } catch (ParseException e) {
             e.printStackTrace();
             return Response.status(400).build(); //Code 400: Bad Request due to malformed JSON
         }
         return Response.ok().build();
+    }
+
+    @Path(DATABASE) //join if not in network, otherwise receive address for key lookup
+    @GET
+    @Produces("text/plain")
+    public String dumpDatabase() {
+       return n.getDatabaseAsString();
     }
 
     @Path(RESOURCEPATH)

@@ -438,10 +438,10 @@ public class Node {
                 String data = dataSource.getData();
                 storage.putData(data);
                 pushDataToSuccessors(data);
-                int tenSeconds = 10000;
-                double random = Math.random() * tenSeconds;
-                System.out.println("Data was updated with new value: " + data + ". Now I sleep for " + tenSeconds + random + " seconds. Zzz...");
-                Thread.sleep((long) (tenSeconds + random));
+                int sleepTime = 2000;
+                double random = Math.random() * sleepTime;
+                System.out.println("Data was updated with new value: " + data + ". Now I sleep for " + sleepTime + random + " seconds. Zzz...");
+                Thread.sleep((long) (sleepTime + random));
             } catch (InterruptedException e) {
                 dataSource = null;
             } catch (NodeOfflineException e) {
@@ -471,6 +471,7 @@ public class Node {
 
     private void pushDataToSuccessors(String data) {
         for (String succAddress : successorList) {
+            if (succAddress.equals(address)) {break;}
             String url = succAddress + ChordResource.DATABASE + "/data";
             JSONObject body = new JSONObject();
             body.put(JSONFormat.VALUE, data);
@@ -484,6 +485,9 @@ public class Node {
 
     public void upsertDatabase(String type, String value, boolean commit) {
         storage.putValue(type, value, commit);
+    }
+    public void overwriteData(ArrayList<String> value) {
+        storage.putData(value);
     }
 
     public String getData() {
@@ -512,6 +516,10 @@ public class Node {
         } catch (NodeOfflineException e) {
             e.printStackTrace();
         }
+    }
+
+    public String getDatabaseAsString() {
+        return storage.toString();
     }
 }
 
