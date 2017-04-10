@@ -31,12 +31,6 @@
             <artifactId>jersey-media-moxy</artifactId>
         </dependency>
         <dependency>
-            <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
-            <version>4.9</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
             <groupId>org.glassfish.jersey.ext</groupId>
             <artifactId>jersey-mvc-mustache</artifactId>
             <version>${jersey.version}</version>
@@ -61,6 +55,12 @@
             <artifactId>mapdb</artifactId>
             <version>3.0.3</version>
         </dependency>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.12</version>
+        </dependency>
+
     </dependencies>
 
     <build>
