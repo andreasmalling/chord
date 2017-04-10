@@ -3,6 +3,7 @@ package org.sparkle.twilight;
 
 import org.junit.Before;
 import org.junit.Test;
+import sun.misc.BASE64Encoder;
 
 import java.security.KeyPair;
 
@@ -15,24 +16,31 @@ import static org.junit.Assert.assertTrue;
  */
 public class KeyManagerTest {
     KeyManager man;
+    private String message;
+    private KeyPair pair;
 
     @Before
     public void setUp() {
         man = new KeyManager(512);
+        message = "hej Karl";
+        pair = man.getKeys();
     }
 
     @Test
     public void testEncryptDecrypt() {
-        String message = "hej Karl";
-        KeyPair pair = man.getKeys();
         byte[] cipherText = man.encrypt(message.getBytes(),pair.getPublic());
         byte[] clearText = man.decrypt(cipherText,pair.getPrivate());
-        //print cipherText as string just for fun
-        System.out.println(new String(cipherText));
 
         assertEquals("decryted message should be the same as original",message, new String(clearText));
         assertNotEquals("message must not be the same as encrypted message",cipherText, message.getBytes());
+    }
 
+    @Test
+    public void testSignVerify() {
+        byte[] signature = man.sign(message.getBytes(),pair.getPrivate());
+        boolean b = man.verify(message.getBytes(), signature,pair.getPublic());
+
+        assertTrue("should verify to true", b);
     }
 
 }

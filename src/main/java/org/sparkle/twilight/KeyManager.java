@@ -6,12 +6,12 @@ import java.security.*;
 public class KeyManager {
     private KeyPairGenerator gen;
     private final String ALGORITHM = "RSA";
+    private final String HASHPLUSALGORITHM = "SHA256with" + ALGORITHM;
         public KeyManager(int keySize) {
             try {
                 gen = KeyPairGenerator.getInstance(ALGORITHM);
                 gen.initialize(keySize);
             } catch (NoSuchAlgorithmException e) {
-                //we should never be here if we coded it correctly
                 e.printStackTrace();
             }
         }
@@ -43,5 +43,39 @@ public class KeyManager {
             }
             return dectyptedText;
         }
+
+        public byte[] sign(byte[] data, PrivateKey key) {
+            byte[] signedData = null;
+            try {
+                Signature sig = Signature.getInstance(HASHPLUSALGORITHM);
+                sig.initSign(key);
+                sig.update(data);
+                signedData = sig.sign();
+            } catch (NoSuchAlgorithmException e) {
+                e.printStackTrace();
+            } catch (InvalidKeyException e) {
+                e.printStackTrace();
+            } catch (SignatureException e) {
+                e.printStackTrace();
+            }
+            return signedData;
+        }
+
+    public boolean verify(byte[] data, byte[] signature, PublicKey key) {
+        boolean judgment = false;
+        try {
+            Signature sig = Signature.getInstance(HASHPLUSALGORITHM);
+            sig.initVerify(key);
+            sig.update(data);
+            judgment = sig.verify(signature);
+        } catch (NoSuchAlgorithmException e) {
+            e.printStackTrace();
+        } catch (InvalidKeyException e) {
+            e.printStackTrace();
+        } catch (SignatureException e) {
+            e.printStackTrace();
+        }
+        return judgment;
+    }
 
 }
