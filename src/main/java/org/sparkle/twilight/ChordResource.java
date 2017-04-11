@@ -28,7 +28,6 @@ public class ChordResource {
     public static final String KILLPATH = "kill";
     public static final String SUCCESSORPATH = "successor";
     public static final String SUCCESSORLISTPATH = "successor/list";
-    public static final String RESOURCEPATH = "resource";
     public static final String DATABASE = "database";
 
     private Node n;
@@ -198,25 +197,17 @@ public class ChordResource {
         return Response.ok().build();
     }
 
-    @Path("database/{type}") //join if not in network, otherwise receive address for key lookup
+    @Path("database/{key}") //join if not in network, otherwise receive address for key lookup
     @POST
     @Consumes(JSONFormat.JSON)
-    public Response updateDatabase(String request, @PathParam("type") String type) {
+    public Response updateDatabase(@PathParam("key") String key, String request) {
         JSONParser parser = new JSONParser();
         try {
-        JSONObject jRequest = (JSONObject) parser.parse(request);
-            if(type.equals(ChordStorage.DATA_KEY)){
-                Object value = parser.parse(jRequest.get(JSONFormat.VALUE).toString());
-                if (value instanceof JSONArray) {
-                    ArrayList<String> data = new ArrayList<String>((JSONArray) value);
-                    n.overwriteData(data);
-                } else {
-                    n.upsertDatabase(type, value.toString(), true);
-                }
-            } else {
-                String value = jRequest.get(JSONFormat.VALUE).toString();
-                n.upsertDatabase(type, value, true);
-            }
+            JSONObject jRequest = (JSONObject) parser.parse(request);
+            Object value = jRequest.get(JSONFormat.VALUE);
+            n.putObjectInStorage(key, value);
+            Runnable replicateThread = () -> n.replicateData(key, jRequest);
+            new Thread(replicateThread).start();
         } catch (ParseException e) {
             e.printStackTrace();
             return Response.status(400).build(); //Code 400: Bad Request due to malformed JSON
@@ -228,55 +219,30 @@ public class ChordResource {
     @GET
     @Produces("text/plain")
     public String dumpDatabase() {
-       return n.getDatabaseAsString();
+        return n.getDatabaseAsString();
     }
 
-    @Path(RESOURCEPATH)
+    @Path(DATABASE)
     @POST
-    @Consumes("application/x-www-form-urlencoded")
-    public Response putResourceWeb(@FormParam("id") String id, @FormParam("token") String token) {
-
-        JSONObject jRequest = new JSONObject();
-        jRequest.put(JSONFormat.ID,id);
-        jRequest.put(JSONFormat.ACCESSTOKEN,token);
-        Runnable putResourceThread = () -> n.handlePutResource(jRequest);
-        new Thread(putResourceThread).start();
-        return Response.ok().build();
-    }
-
-
-    @Path(RESOURCEPATH)
-    @PUT
     @Consumes(JSONFormat.JSON)
-    public Response putResource(String request) {
+    public Response bulkInsertDatabase(String json) {
         JSONParser parser = new JSONParser();
         try {
-            JSONObject jRequest = (JSONObject) parser.parse(request);
-            Runnable putResourceThread = () -> n.handlePutResource(jRequest);
-            new Thread(putResourceThread).start();
+            JSONObject jRequest = (JSONObject) parser.parse(json);
+            JSONArray jsonArray = (JSONArray) jRequest.get(JSONFormat.DATA);
+
+            for (int i=0; i < jsonArray.size(); i++) {
+                JSONObject jsonObject = (JSONObject) jsonArray.get(i);
+                Object key = jsonObject.get(JSONFormat.KEY);
+                Object value = jsonObject.get(JSONFormat.VALUE);
+                n.putObjectInStorage(key, value);
+            }
         } catch (ParseException e) {
             e.printStackTrace();
+            return Response.status(400).build(); //Code 400: Bad Request due to malformed JSON
         }
         return Response.ok().build();
     }
-
-    @Path(RESOURCEPATH)
-    @GET
-    @Produces(JSONFormat.JSON)
-    public String getResource() {
-        DataSource d = n.getDataSource();
-        JSONObject json = new JSONObject();
-        if (d == null) {
-            json.put(JSONFormat.HASDATA, false);
-            json.put(JSONFormat.DATA, null);
-        } else {
-            String data = d.getData();
-            json.put(JSONFormat.HASDATA, true);
-            json.put(JSONFormat.DATA, data);
-        }
-        return json.toJSONString();
-    }
-
 
     @Path(LEAVEPATH)
     @POST
@@ -299,10 +265,6 @@ public class ChordResource {
         public List<String> addresses;
         public List<String> successors;
         public List<Finger> fingerTable;
-        public boolean hasData = false;
-        public String data = "";
-        public String getseturl = "";
-        public boolean hasDataForm;
 
         public Context(final Node node) {
             this.id = node.getID() + "";
@@ -311,15 +273,6 @@ public class ChordResource {
             this.addresses = node.getAddresses();
             this.successors = node.getSuccessorList();
             this.fingerTable = node.getFingerTable();
-            this.data = node.getData();
-            if (!this.data.equals(DataSource.DATA_NOT_AVAILABLE)) {
-                this.hasData = true;
-                DataSource dataSource = node.getDataSource();
-                if (dataSource != null) {
-                    this.hasDataForm = true;
-                    this.getseturl = dataSource.getSetUrl();
-                }
-            }
         }
     }
 }

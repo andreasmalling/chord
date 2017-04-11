@@ -1,13 +1,13 @@
 package org.sparkle.twilight;
 
 
-
-import org.json.simple.JSONObject;
+import org.json.simple.JSONArray;
+import org.json.simple.JSONAware;
 import org.mapdb.DB;
 import org.mapdb.DBMaker;
 
 import java.io.File;
-import java.util.ArrayList;
+import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 
 /**
@@ -17,9 +17,7 @@ public class ChordStorage {
 
     private DB db;
     private ConcurrentMap map;
-    public static final String DATA_KEY = "data";
-    public static final String ID_KEY = "id";
-    public static final String TOKEN_KEY = "token";
+    public static final int INDEX_KEY = 0;
 
     public ChordStorage(String node_id) {
         File file = new File("db/" + node_id);
@@ -30,52 +28,51 @@ public class ChordStorage {
         map = db.hashMap("map").createOrOpen();
     }
 
-    public void putData(String value) {
-        ArrayList<String> data = getDataList();
-        data.add(0, value);
-        map.put(DATA_KEY, data);
+    /**
+     * overwrite list in storage
+     *
+     * @param topics - a JSONArray with topic title and where to find it
+     **/
+    public void overwriteIndex(JSONArray topics) {
+        map.put(INDEX_KEY, topics);
         db.commit();
     }
 
-    public void putData(ArrayList<String> input) {
-        map.put(DATA_KEY, input);
-        db.commit();
+    /**
+     * get index list from storage
+     *
+     * @return List - an ArrayList with all topics, JSONObjects with titles and where to find it
+     **/
+    public JSONArray getIndexList() {
+        return (JSONArray) map.get(INDEX_KEY);
     }
 
-    public void putValue(String key, String value, boolean commit) {
-        if(key.equals(DATA_KEY)){
-            putData(value);
-            return;
-        }
+    /**
+     * get all the keys (id's) in the database
+     *
+     * @return Set of keys
+     **/
+    public Set dumpKeySet() {
+        return map.keySet();
+    }
+
+    /**
+     * get all the keys (id's) in the database
+     *
+     * @return Set of keys
+     **/
+    public Object getObject(Object key) {
+        return map.get(key);
+    }
+
+    /**
+     * get all the keys (id's) in the database
+     *
+     * @return Set of keys
+     **/
+    public void putObject(Object key, Object value) {
         map.put(key, value);
-        if (commit) {
-            db.commit();
-        }
-    }
-
-    public String getData() {
-        if (map.containsKey(DATA_KEY)) {
-            ArrayList<String> temp = (ArrayList<String>) map.get(DATA_KEY);
-            if (temp.size() > 0) {
-                return temp.get(0);
-            }
-        }
-        return DataSource.DATA_NOT_AVAILABLE;
-    }
-
-    public ArrayList<String> getDataList() {
-        if (map.containsKey(DATA_KEY)) {
-            return (ArrayList<String>) map.get(DATA_KEY);
-        }
-        return new ArrayList<>();
-    }
-
-    public String getValue(String key) throws NoValueException {
-
-        if(map.containsKey(key))
-            return map.get(key).toString();
-        else
-            throw new NoValueException();
+        db.commit();
     }
 
     public void shutdown() {
@@ -83,10 +80,10 @@ public class ChordStorage {
     }
 
     @Override
-    public String toString(){
+    public String toString() {
         String res = "";
-        for (Object k: map.keySet()) {
-            res += k + ": " + map.get(k) + "\n";
+        for (Object k : map.keySet()) {
+            res += k + ": " + ((JSONAware) map.get(k)).toJSONString() + "\n";
         }
         return res;
     }
