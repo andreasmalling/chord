@@ -21,7 +21,7 @@ public class KeyManagerTest {
 
     @Before
     public void setUp() {
-        man = new KeyManager(512);
+        man = new KeyManager(2048);
         message = "hej Karl";
         pair = man.getKeys();
     }
