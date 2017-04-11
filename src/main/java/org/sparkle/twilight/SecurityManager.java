@@ -3,6 +3,7 @@ package org.sparkle.twilight;
 import sun.security.tools.keytool.CertAndKeyGen;
 import sun.security.x509.X500Name;
 
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.security.*;
 import java.security.cert.Certificate;
@@ -15,16 +16,38 @@ public class SecurityManager {
     private X509Certificate cert;
     private KeyStore keyStore;
 
+    public CertAndKeyGen getKeyGen() {
+        return keyGen;
+    }
+
+    public void setKeyGen(CertAndKeyGen keyGen) {
+        this.keyGen = keyGen;
+    }
+
+    public void setCert(X509Certificate cert) {
+        this.cert = cert;
+    }
+
+    public KeyStore getKeyStore() {
+        return keyStore;
+    }
+
+    public void setKeyStore(KeyStore keyStore) {
+        this.keyStore = keyStore;
+    }
+
     public SecurityManager(){
         try{
             keyGen = new CertAndKeyGen("RSA", "SHA256WithRSA", null);
             keyGen.generate(2048);
             cert = keyGen.getSelfCertificate(new X500Name(""), 365 * 24 * 3600);
             keyStore = KeyStore.getInstance("jceks");
+            char[] pass = "Pa$$w0rd".toCharArray();
+            keyStore.load(null, pass);
             Certificate[] certArray = {cert};
             keyStore.setKeyEntry("private_key", keyGen.getPrivateKey().getEncoded(),certArray);
             keyStore.setCertificateEntry("cert",cert);
-            keyStore.store(null);
+            keyStore.store(new FileOutputStream("keystore.jceks"), pass);
         } catch (NoSuchAlgorithmException e) {
             e.printStackTrace();
         } catch (NoSuchProviderException e) {
