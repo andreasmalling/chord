@@ -29,8 +29,7 @@ public class ChordResource {
     public static final String SUCCESSORPATH = "successor";
     public static final String SUCCESSORLISTPATH = "successor/list";
     public static final String DATABASE = "database";
-
-    private Node n;
+    private static Node n;
     private final JSONParser parser = new JSONParser();
     private final int lookupListSize = 5;
 
@@ -256,6 +255,10 @@ public class ChordResource {
     @POST
     public void kill() {
         n.killNode();
+    }
+
+    public static Node getNode() {
+        return n;
     }
 
     public static class Context {

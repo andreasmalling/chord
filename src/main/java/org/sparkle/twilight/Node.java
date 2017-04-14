@@ -26,6 +26,7 @@ public class Node {
 
     private ConcurrentHashMap<Integer, Instruction> instructionMap;
     private final int successorListLength = 5;
+
     private ChordStorage storage;
 
     public Node() {
@@ -400,6 +401,10 @@ public class Node {
 
     public String getDatabaseAsString() {
         return storage.toString();
+    }
+
+    public ChordStorage getStorage() {
+        return storage;
     }
 
     public void putObjectInStorage(Object key, Object value) {

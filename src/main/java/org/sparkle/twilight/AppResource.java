@@ -2,6 +2,7 @@ package org.sparkle.twilight;
 
 import org.glassfish.hk2.api.Immediate;
 import org.glassfish.jersey.server.mvc.Template;
+import org.json.simple.JSONArray;
 
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
@@ -11,11 +12,19 @@ import javax.ws.rs.Produces;
 @Path(value = "/app/")
 @Immediate
 public class AppResource {
+
+    private App app;
+
+    public AppResource() {
+        this.app = new App(ChordResource.getNode());
+    }
+
     @Template(name = "/appIndex.mustache")
     @GET
     @Produces("text/html")
     public IndexContext getIndexHtml() {
-        return new IndexContext();
+        JSONArray index = app.getIndex();
+        return new IndexContext(index);
     }
 
     @GET
@@ -41,6 +50,13 @@ public class AppResource {
 
     private class IndexContext {
 
+        public JSONArray index;
+        public String myUrl;
+
+        public IndexContext(JSONArray index) {
+            this.index = index;
+            this.myUrl = Main.BASE_URI;
+        }
     }
 
     private class TopicContext {
