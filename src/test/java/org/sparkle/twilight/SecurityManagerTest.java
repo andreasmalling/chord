@@ -1,5 +1,14 @@
 package org.sparkle.twilight;
 
+import org.apache.http.HttpResponse;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.conn.ManagedHttpClientConnection;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.protocol.BasicHttpContext;
+import org.apache.http.protocol.HttpContext;
+import org.apache.http.protocol.HttpCoreContext;
 import org.glassfish.grizzly.http.server.HttpServer;
 import org.glassfish.grizzly.ssl.SSLContextConfigurator;
 import org.glassfish.grizzly.ssl.SSLEngineConfigurator;
@@ -13,7 +22,11 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
 import java.io.FileInputStream;
+import java.io.IOException;
 import java.net.URI;
+import java.security.KeyManagementException;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
@@ -94,5 +107,52 @@ public class SecurityManagerTest {
                 + "%sapplication.wadl\nHit enter to stop it...", BASE_URI));
         System.in.read();
         server.shutdownNow();
+    }
+
+    @Test
+    public void httpsClient(){
+        try {
+            CloseableHttpClient httpclient = (CloseableHttpClient) new HttpsClientFactory().getHttpsClient();
+
+            HttpContext context = new BasicHttpContext();
+            HttpGet test = new HttpGet("https://www.google.com");
+
+            CloseableHttpResponse res = httpclient.execute(test, context);
+            System.out.println(res.getStatusLine());
+            System.out.println(convertStreamToString(res.getEntity().getContent()));
+
+            ManagedHttpClientConnection man = (ManagedHttpClientConnection) context.getAttribute(HttpCoreContext.HTTP_CONNECTION);
+            Certificate[] certs = man.getSSLSession().getPeerCertificates();
+
+            for(Certificate c : certs){
+                System.out.println(c.toString());
+            }
+            /*
+            httpclient.getHostConfiguration().setHost("www.whatever.com", 443, myhttps);
+            GetMethod httpget = new GetMethod("/");
+            try {
+                httpclient.executeMethod(httpget);
+                System.out.println(httpget.getStatusLine());
+            } finally {
+                httpget.releaseConnection();
+            }*/
+
+        } catch (KeyStoreException e) {
+            e.printStackTrace();
+        } catch (NoSuchAlgorithmException e) {
+            e.printStackTrace();
+        } catch (CertificateException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        } catch (KeyManagementException e) {
+            e.printStackTrace();
+        }
+
+    }
+
+    static String convertStreamToString(java.io.InputStream is) {
+        java.util.Scanner s = new java.util.Scanner(is).useDelimiter("\\A");
+        return s.hasNext() ? s.next() : "";
     }
 }
