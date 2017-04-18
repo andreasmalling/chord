@@ -40,12 +40,13 @@ public class SecurityManager {
         try{
             keyGen = new CertAndKeyGen("RSA", "SHA256WithRSA", null);
             keyGen.generate(2048);
-            cert = keyGen.getSelfCertificate(new X500Name(""), 365 * 24 * 3600);
+            cert = keyGen.getSelfCertificate(new X500Name("CN=localhost"), 365 * 24 * 3600);
             keyStore = KeyStore.getInstance("jceks");
             char[] pass = "Pa$$w0rd".toCharArray();
             keyStore.load(null, pass);
             Certificate[] certArray = {cert};
-            keyStore.setKeyEntry("private_key", keyGen.getPrivateKey().getEncoded(),certArray);
+            System.out.println(keyGen.getPrivateKey().getFormat()+ " @@ "+ keyGen.getPrivateKey().getClass());
+            keyStore.setKeyEntry("PKCS", keyGen.getPrivateKey(), pass,certArray);
             keyStore.setCertificateEntry("cert",cert);
             keyStore.store(new FileOutputStream("keystore.jceks"), pass);
         } catch (NoSuchAlgorithmException e) {

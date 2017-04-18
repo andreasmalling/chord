@@ -76,17 +76,18 @@ public class SecurityManagerTest {
                 .register(ImmediateFeature.class);
 
 
-        SSLContextConfigurator sslCon = new SSLContextConfigurator(true);
-
+        SSLContextConfigurator sslCon = new SSLContextConfigurator(false);
+        char[] pass = "Pa$$w0rd".toCharArray();
         sslCon.setKeyStoreType("jceks");
         sslCon.setKeyStoreFile("keystore.jceks"); // contains server keypair
-        SSLContext sslContext = sslCon.createSSLContext();
-        sslContext = SSLContext.getInstance("TLSv1.2");
-        sslContext.init(null, getTrustManager(), new java.security.SecureRandom());
+        sslCon.setKeyPass(pass);
+        //SSLContext sslContext = sslCon.createSSLContext();
+        //sslContext = SSLContext.getInstance("TLSv1");
+        //sslContext.init(null, getTrustManager(), new java.security.SecureRandom());
         // create and start a new instance of grizzly http server
         // exposing the Jersey application at BASE_URI
         HttpServer server = GrizzlyHttpServerFactory.createHttpServer(URI.create(BASE_URI), rc
-                , true, new SSLEngineConfigurator(sslContext, false, false, true));
+                , true, new SSLEngineConfigurator(sslCon, false, false, true));
 
         server.start();
         System.out.println(String.format("Jersey app started with WADL available at "
