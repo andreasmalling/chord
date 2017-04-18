@@ -33,7 +33,7 @@ public class ChordStorage {
      *
      * @param topics - a JSONArray with topic title and where to find it
      **/
-    public void overwriteIndex(JSONArray topics) {
+    public void overwriteIndex(Object topics) {
         map.put(INDEX_KEY, topics);
         db.commit();
     }
@@ -43,8 +43,8 @@ public class ChordStorage {
      *
      * @return List - an ArrayList with all topics, JSONObjects with titles and where to find it
      **/
-    public JSONArray getIndexList() {
-        return (JSONArray) map.get(INDEX_KEY);
+    public Object getIndexList() {
+        return map.get(INDEX_KEY);
     }
 
     /**

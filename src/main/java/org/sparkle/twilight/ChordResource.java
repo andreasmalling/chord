@@ -34,6 +34,7 @@ public class ChordResource {
     private final int lookupListSize = 5;
 
     public ChordResource() {
+        //TODO Node creation before AppResource
         if (Main.ENTRY_POINT == null) {
             this.n = new Node();
         } else {
@@ -196,7 +197,7 @@ public class ChordResource {
         return Response.ok().build();
     }
 
-    @Path("database/{key}") //join if not in network, otherwise receive address for key lookup
+    @Path("database/{key}")
     @POST
     @Consumes(JSONFormat.JSON)
     public Response updateDatabase(@PathParam("key") String key, String request) {

@@ -2,6 +2,7 @@ package org.sparkle.twilight;
 
 import org.apache.commons.codec.digest.DigestUtils;
 import org.json.simple.JSONArray;
+import org.json.simple.JSONAware;
 import org.json.simple.JSONObject;
 
 import java.util.ArrayList;
@@ -224,12 +225,12 @@ public class Node {
         }
     }
 
-    private void packTopicsAsJSON(JSONArray topicsToSuccs, Object key) {
-        JSONObject topic = (JSONObject) storage.getObject(key);
+    private void packTopicsAsJSON(JSONArray topicsToSend, Object key) {
+        JSONAware topic = (JSONAware) storage.getObject(key);
         JSONObject jsonObject = new JSONObject();
         jsonObject.put(JSONFormat.KEY, key);
         jsonObject.put(JSONFormat.VALUE, topic);
-        topicsToSuccs.add(jsonObject);
+        topicsToSend.add(jsonObject);
     }
 
     //TODO - could probably be smarter than linear
