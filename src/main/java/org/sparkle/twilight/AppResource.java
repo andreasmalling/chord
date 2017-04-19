@@ -3,14 +3,16 @@ package org.sparkle.twilight;
 import org.glassfish.hk2.api.Immediate;
 import org.glassfish.jersey.server.mvc.Template;
 import org.json.simple.JSONArray;
+import org.json.simple.JSONObject;
 
+import javax.inject.Singleton;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 
 @Path(value = "/app/")
-@Immediate
+@Singleton
 public class AppResource {
 
     private App app;
@@ -38,14 +40,15 @@ public class AppResource {
     @Path("{id}")
     @Produces("text/html")
     public TopicContext getTopicHtml(@PathParam("id") String id) {
-        return new TopicContext();
+        JSONObject topic = app.getTopic(id);
+        return new TopicContext(topic);
     }
 
     @GET
     @Path("{id}")
     @Produces(JSONFormat.JSON)
     public String getTopicJson(@PathParam("id") String id) {
-        return null;
+        return "";
     }
 
     private class IndexContext {
@@ -60,5 +63,14 @@ public class AppResource {
     }
 
     private class TopicContext {
+        public String title;
+        public String message;
+        public JSONArray replies;
+
+        public TopicContext(JSONObject topic) {
+            title = (String) topic.get(JSONFormat.TITLE);
+            message = (String) topic.get(JSONFormat.MESSAGE);
+            replies = (JSONArray) topic.get(JSONFormat.REPLIES);
+        }
     }
 }

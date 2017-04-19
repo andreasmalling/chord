@@ -5,5 +5,22 @@
     <title>Bismuth</title>
 </head>
 <body>
-    cool topic bro
+    <div>
+        <div>
+            <h1>{{title}}</h1>
+            <p>{{message}}</p>
+        </div>
+        {{#replies}}
+            <div>
+                <!--<span>{serverTime}</span>-->
+                <p>{{message}}</p>
+            </div>
+        {{/replies}}
+        <div>
+            <form action="/suckacock" method="post" target="nothing">
+                <input type="text" name="message" placeholder="Reply nuggah"/>
+                <input type="submit" value="Reply to topic"/>
+            </form>
+        </div>
+    </div>
 </body>

@@ -2,6 +2,7 @@ package org.sparkle.twilight;
 
 
 import org.json.simple.JSONArray;
+import org.json.simple.JSONObject;
 
 public class App {
 
@@ -16,5 +17,11 @@ public class App {
         ChordStorage storage = node.getStorage();
         Object index = storage.getObject(INDEXKEY);
         return (JSONArray) index;
+    }
+
+    public JSONObject getTopic(String id) {
+        ChordStorage storage = node.getStorage();
+        Object topic = storage.getObject(id);
+        return (JSONObject) topic;
     }
 }

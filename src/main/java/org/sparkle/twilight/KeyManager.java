@@ -20,6 +20,12 @@ public class KeyManager {
             return gen.generateKeyPair();
         }
 
+    /**
+     *
+     * @param clearText, may not exceed keysize/8-11 bytes
+     * @param key
+     * @return
+     */
         public byte[] encrypt(byte[] clearText, PublicKey key) {
             byte[] cipherText = null;
             try {
