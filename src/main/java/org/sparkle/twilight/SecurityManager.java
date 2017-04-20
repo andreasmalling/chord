@@ -13,7 +13,7 @@ import java.security.cert.X509Certificate;
 public class SecurityManager {
 
     public static String TYPE = "jceks";
-    public static String KEYSTORE = "keystore."+TYPE;
+    public static String KEYSTORE = null;
     public static char[] PASSWORD = "nopassword".toCharArray();
 
 
@@ -41,7 +41,8 @@ public class SecurityManager {
         this.keyStore = keyStore;
     }
 
-    public SecurityManager(){
+    public SecurityManager(String basePort){
+        KEYSTORE = "keystore-" + basePort + "." +TYPE;
         try{
             keyGen = new CertAndKeyGen("RSA", "SHA256WithRSA", null);
             keyGen.generate(2048);

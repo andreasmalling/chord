@@ -16,12 +16,14 @@ import java.net.URI;
  *
  */
 public class Main {
-    private static final SecurityManager SM = new SecurityManager();
+    private static SecurityManager SM = null;
     // Base URI the Grizzly HTTP server will listen on
     public static String BASE_URI;
+    public static String BASE_PORT;
     public static String ENTRY_POINT;
     public static HttpServer server;
-    public static HttpUtil httpUtil;
+    public static HttpsUtil httpUtil;
+
 
     /**
      * Starts Grizzly HTTP server exposing JAX-RS resources defined in this application.
@@ -41,9 +43,10 @@ public class Main {
     }
 
     public static HttpServer startSecureServer(){
-
+        SM = new SecurityManager(BASE_PORT);
         final ResourceConfig rc = new ResourceConfig().property(
                 MustacheMvcFeature.TEMPLATE_BASE_PATH, "templates")
+                .packages("org.sparkle.twilight")
                 .register(MustacheMvcFeature.class)
                 .register(ImmediateFeature.class);
 
@@ -65,16 +68,19 @@ public class Main {
     public static void main(String[] args) throws IOException {
         if (args.length == 1) {
             //Create chord ring at args 0
-            BASE_URI = "https://localhost:" + args[0] + "/";
+            BASE_PORT = args[0];
+            BASE_URI = "https://localhost:" + BASE_PORT + "/";
         } else if (args.length == 2){
             //Join chord ring at args 1
-            BASE_URI = "https://localhost:" + args[0] + "/";
+            BASE_PORT = args[0];
+            BASE_URI = "https://localhost:" + BASE_PORT + "/";
             ENTRY_POINT = "https://localhost:" + args[1] + "/";
         } else {
+            BASE_PORT = args[0];
             //Create chord ring at port 8080
-            BASE_URI = "https://localhost:8080/";
+            BASE_URI = "https://localhost:" + BASE_PORT + "/";
         }
-        httpUtil = new HttpUtil();
+        httpUtil = new HttpsUtil();
         server = startSecureServer();
 
         System.out.println(String.format("Jersey app started with WADL available at "
