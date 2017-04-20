@@ -2,6 +2,8 @@ package org.sparkle.twilight;
 
 import org.apache.http.client.HttpClient;
 import org.glassfish.grizzly.http.server.HttpServer;
+import org.glassfish.grizzly.ssl.SSLContextConfigurator;
+import org.glassfish.grizzly.ssl.SSLEngineConfigurator;
 import org.glassfish.jersey.grizzly2.httpserver.GrizzlyHttpServerFactory;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.glassfish.jersey.server.mvc.mustache.MustacheMvcFeature;
@@ -14,6 +16,7 @@ import java.net.URI;
  *
  */
 public class Main {
+    private static final SecurityManager SM = new SecurityManager();
     // Base URI the Grizzly HTTP server will listen on
     public static String BASE_URI;
     public static String ENTRY_POINT;
@@ -37,6 +40,23 @@ public class Main {
         return GrizzlyHttpServerFactory.createHttpServer(URI.create(BASE_URI), rc);
     }
 
+    public static HttpServer startSecureServer(){
+
+        final ResourceConfig rc = new ResourceConfig().property(
+                MustacheMvcFeature.TEMPLATE_BASE_PATH, "templates")
+                .register(MustacheMvcFeature.class)
+                .register(ImmediateFeature.class);
+
+        SSLContextConfigurator sslCon = new SSLContextConfigurator(false);
+        sslCon.setKeyStoreType(SM.TYPE);
+        sslCon.setKeyStoreFile(SM.KEYSTORE); // contains server keypair
+        sslCon.setKeyPass(SM.PASSWORD);
+        HttpServer server = GrizzlyHttpServerFactory.createHttpServer(URI.create(BASE_URI), rc
+                , true, new SSLEngineConfigurator(sslCon, false, false, true));
+
+        return server;
+        }
+
     /**
      * Main method.
      * @param args
@@ -55,7 +75,7 @@ public class Main {
             BASE_URI = "http://localhost:8080/";
         }
         httpUtil = new HttpUtil();
-        server = startServer();
+        server = startSecureServer();
 
         System.out.println(String.format("Jersey app started with WADL available at "
                 + "%sapplication.wadl\nHit enter to stop it...", BASE_URI));

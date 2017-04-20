@@ -12,6 +12,11 @@ import java.security.cert.X509Certificate;
 
 public class SecurityManager {
 
+    public static String TYPE = "jceks";
+    public static String KEYSTORE = "keystore."+TYPE;
+    public static char[] PASSWORD = "nopassword".toCharArray();
+
+
     private CertAndKeyGen keyGen;
     private X509Certificate cert;
     private KeyStore keyStore;
@@ -41,14 +46,13 @@ public class SecurityManager {
             keyGen = new CertAndKeyGen("RSA", "SHA256WithRSA", null);
             keyGen.generate(2048);
             cert = keyGen.getSelfCertificate(new X500Name("CN=localhost"), 365 * 24 * 3600);
-            keyStore = KeyStore.getInstance("jceks");
-            char[] pass = "Pa$$w0rd".toCharArray();
-            keyStore.load(null, pass);
+            keyStore = KeyStore.getInstance(TYPE);
+            keyStore.load(null, PASSWORD);
             Certificate[] certArray = {cert};
             System.out.println(keyGen.getPrivateKey().getFormat()+ " @@ "+ keyGen.getPrivateKey().getClass());
-            keyStore.setKeyEntry("PKCS", keyGen.getPrivateKey(), pass,certArray);
+            keyStore.setKeyEntry("PKCS", keyGen.getPrivateKey(), PASSWORD,certArray);
             keyStore.setCertificateEntry("cert",cert);
-            keyStore.store(new FileOutputStream("keystore.jceks"), pass);
+            keyStore.store(new FileOutputStream(KEYSTORE), PASSWORD);
         } catch (NoSuchAlgorithmException e) {
             e.printStackTrace();
         } catch (NoSuchProviderException e) {
