@@ -5,6 +5,7 @@
     <title>Bismuth</title>
 </head>
 <body>
+<iframe width="0" height="0" border="0" name="nothing" id="nothing" style="display: none"></iframe>
     <div>
         <div>
             <h1>{{title}}</h1>
@@ -17,7 +18,7 @@
             </div>
         {{/replies}}
         <div>
-            <form action="/suckacock" method="post" target="nothing">
+            <form action="/app/{{id}}/reply" method="post" target="nothing">
                 <input type="text" name="message" placeholder="Reply nuggah"/>
                 <input type="submit" value="Reply to topic"/>
             </form>

@@ -44,7 +44,7 @@ public class AppResource {
     @Produces("text/html")
     public TopicContext getTopicHtml(@PathParam("id") String id) {
         JSONObject topic = app.getTopic(id);
-        return new TopicContext(topic);
+        return new TopicContext(topic, id);
     }
 
     @GET
@@ -53,6 +53,13 @@ public class AppResource {
     public String getTopicJson(@PathParam("id") String id) {
         return "";
     }
+
+    @Path("{id}/reply")
+    @POST
+    public void replyToTopic(@PathParam("id") String id, @FormParam("message") String message) {
+        app.replyToTopic(id,message);
+    }
+
 
     private class IndexContext {
 
@@ -66,14 +73,16 @@ public class AppResource {
     }
 
     private class TopicContext {
+        public String id;
         public String title;
         public String message;
         public JSONArray replies;
 
-        public TopicContext(JSONObject topic) {
+        public TopicContext(JSONObject topic, String id) {
             title = (String) topic.get(JSONFormat.TITLE);
             message = (String) topic.get(JSONFormat.MESSAGE);
             replies = (JSONArray) topic.get(JSONFormat.REPLIES);
+            this.id = id;
         }
     }
 }

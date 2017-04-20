@@ -55,4 +55,17 @@ public class App {
         ((JSONArray) index).add(topic);
         storage.putObject(INDEXKEY,index);
     }
+
+
+    public void replyToTopic(String id, String message) {
+        JSONObject messageJson = new JSONObject();
+        messageJson.put(JSONFormat.MESSAGE,message);
+
+        //TODO add check if responsible otherwise redirect
+        ChordStorage storage = node.getStorage();
+        JSONObject topic = (JSONObject) storage.getObject(id);
+        JSONArray replyList = (JSONArray) topic.get(JSONFormat.REPLIES);
+        replyList.add(messageJson);
+        storage.putObject(id,topic);
+    }
 }
