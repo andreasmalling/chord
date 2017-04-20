@@ -1,7 +1,5 @@
 package org.sparkle.twilight;
 
-import org.apache.http.HttpResponse;
-import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.conn.ManagedHttpClientConnection;
@@ -18,10 +16,8 @@ import org.glassfish.jersey.server.mvc.mustache.MustacheMvcFeature;
 import org.junit.Before;
 import org.junit.Test;
 
-import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.URI;
 import java.security.KeyManagementException;
@@ -37,7 +33,7 @@ import java.security.cert.X509Certificate;
 public class SecurityManagerTest {
     @Test
     public void getCert() throws Exception {
-        SecurityManager CM = new SecurityManager();
+        SecurityManager CM = new SecurityManager("test");
         Certificate cert = CM.getCert();
         System.out.println(cert.toString());
     }
@@ -51,7 +47,7 @@ public class SecurityManagerTest {
 
     @Before
     public void setUp() throws Exception {
-        SM = new SecurityManager();
+        SM = new SecurityManager("test");
     }
 
     private TrustManager[] getTrustManager() {
@@ -90,9 +86,9 @@ public class SecurityManagerTest {
 
 
         SSLContextConfigurator sslCon = new SSLContextConfigurator(false);
-        char[] pass = "Pa$$w0rd".toCharArray();
-        sslCon.setKeyStoreType("jceks");
-        sslCon.setKeyStoreFile("keystore.jceks"); // contains server keypair
+        char[] pass = SM.PASSWORD;
+        sslCon.setKeyStoreType(SM.TYPE);
+        sslCon.setKeyStoreFile(SM.KEYSTORE); // contains server keypair
         sslCon.setKeyPass(pass);
         //SSLContext sslContext = sslCon.createSSLContext();
         //sslContext = SSLContext.getInstance("TLSv1");
