@@ -63,7 +63,7 @@ public class Node {
         upsertFingerTable(true);
     }
 
-    private int generateHash(String address) {
+    public int generateHash(String address) {
         return Integer.decode("0x" + DigestUtils.sha1Hex(address).substring(0, hashTruncation));
     }
 

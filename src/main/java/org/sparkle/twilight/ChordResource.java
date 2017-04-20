@@ -34,7 +34,6 @@ public class ChordResource {
     private final int lookupListSize = 5;
 
     public ChordResource() {
-        //TODO Node creation before AppResource
         if (Main.ENTRY_POINT == null) {
             this.n = new Node();
         } else {

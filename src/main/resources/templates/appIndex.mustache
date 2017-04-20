@@ -5,6 +5,7 @@
     <title>Bismuth</title>
 </head>
 <body>
+    <iframe width="0" height="0" border="0" name="nothing" id="nothing" style="display: none"></iframe>
     <center>
         <h1>Bismuth frontpage</h1>
         {{#index}}
@@ -12,5 +13,12 @@
                 <a href="{{myUrl}}app/{{id}}"> {{title}} </a>
             </p>
         {{/index}}
+
+        <form action="/app/posttopic" id="usrform" method="post" target="nothing">
+            Title: <input type="text" name="title">
+            <input type="submit">
+        </form>
+        <textarea rows="4" cols="50" name="message" form="usrform"></textarea>
     </center>
+    <br>
 </body>

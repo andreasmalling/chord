@@ -6,10 +6,7 @@ import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 
 import javax.inject.Singleton;
-import javax.ws.rs.GET;
-import javax.ws.rs.Path;
-import javax.ws.rs.PathParam;
-import javax.ws.rs.Produces;
+import javax.ws.rs.*;
 
 @Path(value = "/app/")
 @Singleton
@@ -33,6 +30,12 @@ public class AppResource {
     @Produces(JSONFormat.JSON)
     public String getIndexJson() {
         return "";
+    }
+
+    @Path("posttopic")
+    @POST
+    public void postTopicForm(@FormParam("title") String title, @FormParam("message") String message) {
+        app.postTopic(title,message);
     }
 
     @Template(name = "/appTopic.mustache")

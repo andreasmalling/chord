@@ -3,6 +3,7 @@ package org.sparkle.twilight;
 
 import org.json.simple.JSONArray;
 import org.json.simple.JSONAware;
+import org.json.simple.JSONObject;
 import org.mapdb.DB;
 import org.mapdb.DBMaker;
 
@@ -10,14 +11,10 @@ import java.io.File;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 
-/**
- * Created by Kresten on 21-02-2017.
- */
 public class ChordStorage {
 
     private DB db;
     private ConcurrentMap map;
-    public static final int INDEX_KEY = 0;
 
     public ChordStorage(String node_id) {
         File file = new File("db/" + node_id);
@@ -26,25 +23,6 @@ public class ChordStorage {
                 .transactionEnable()
                 .make();
         map = db.hashMap("map").createOrOpen();
-    }
-
-    /**
-     * overwrite list in storage
-     *
-     * @param topics - a JSONArray with topic title and where to find it
-     **/
-    public void overwriteIndex(Object topics) {
-        map.put(INDEX_KEY, topics);
-        db.commit();
-    }
-
-    /**
-     * get index list from storage
-     *
-     * @return List - an ArrayList with all topics, JSONObjects with titles and where to find it
-     **/
-    public Object getIndexList() {
-        return map.get(INDEX_KEY);
     }
 
     /**
