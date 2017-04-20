@@ -65,14 +65,14 @@ public class Main {
     public static void main(String[] args) throws IOException {
         if (args.length == 1) {
             //Create chord ring at args 0
-            BASE_URI = "http://localhost:" + args[0] + "/";
+            BASE_URI = "https://localhost:" + args[0] + "/";
         } else if (args.length == 2){
             //Join chord ring at args 1
-            BASE_URI = "http://localhost:" + args[0] + "/";
-            ENTRY_POINT = "http://localhost:" + args[1] + "/";
+            BASE_URI = "https://localhost:" + args[0] + "/";
+            ENTRY_POINT = "https://localhost:" + args[1] + "/";
         } else {
             //Create chord ring at port 8080
-            BASE_URI = "http://localhost:8080/";
+            BASE_URI = "https://localhost:8080/";
         }
         httpUtil = new HttpUtil();
         server = startSecureServer();
