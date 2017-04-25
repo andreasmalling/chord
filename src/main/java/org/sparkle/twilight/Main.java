@@ -10,6 +10,9 @@ import org.glassfish.jersey.server.mvc.mustache.MustacheMvcFeature;
 
 import java.io.IOException;
 import java.net.URI;
+import java.util.logging.FileHandler;
+import java.util.logging.Logger;
+import java.util.logging.SimpleFormatter;
 
 /**
  * Main class.
@@ -23,6 +26,7 @@ public class Main {
     public static String ENTRY_POINT;
     public static HttpServer server;
     public static HttpsUtil httpUtil;
+    private static final Logger LOGGER = Logger.getLogger(Main.class.getName());
 
 
     /**
@@ -80,9 +84,13 @@ public class Main {
             //Create chord ring at port 8080
             BASE_URI = "https://localhost:" + BASE_PORT + "/";
         }
+
+        LoggerUtil lu = new LoggerUtil(BASE_PORT);
+        LOGGER.addHandler(LoggerUtil.getFh());
+
         httpUtil = new HttpsUtil();
         server = startSecureServer();
-
+        LOGGER.info("Server started at "+BASE_URI);
         System.out.println(String.format("Jersey app started with WADL available at "
                 + "%sapplication.wadl\nHit enter to stop it...", BASE_URI));
         for (String s: args)

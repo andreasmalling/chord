@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.logging.Logger;
 
 import static org.sparkle.twilight.Main.httpUtil;
 
@@ -30,6 +31,8 @@ public class Node {
     private ChordStorage storage;
     private Thread dataUpdateThread;
 
+    private static final Logger LOGGER = Logger.getLogger(Node.class.getName());
+
     public Node() {
         initializeNode();
         // Create Initial Ring
@@ -38,6 +41,8 @@ public class Node {
         inNetwork = true;
         Runnable successorListMaintainerThread = () -> maintainLists();
         new Thread(successorListMaintainerThread).start();
+        LOGGER.addHandler(LoggerUtil.getFh());
+        LOGGER.info("Node created");
     }
 
     public Node(String entryPoint) {
@@ -50,6 +55,8 @@ public class Node {
         }
         //   Lookup new successor --> Set as successor
         //   Lookup Successor's predecessor --> Set pred's Successor to this node.
+        LOGGER.addHandler(LoggerUtil.getFh());
+        LOGGER.info("Node created");
     }
 
     private void initializeNode() {
