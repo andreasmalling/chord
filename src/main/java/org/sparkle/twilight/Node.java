@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import static org.sparkle.twilight.Main.httpUtil;
@@ -41,8 +42,6 @@ public class Node {
         inNetwork = true;
         Runnable successorListMaintainerThread = () -> maintainLists();
         new Thread(successorListMaintainerThread).start();
-        LOGGER.addHandler(LoggerUtil.getFh());
-        LOGGER.info("Node created");
     }
 
     public Node(String entryPoint) {
@@ -51,15 +50,15 @@ public class Node {
         try {
             performLookup(entryPoint, id, address, new JSONProperties("linear", 0, false));
         } catch (NodeOfflineException e) {
-            System.out.println("The node we tried to connect to is offline");
+            LOGGER.severe("The node we tried to connect to is offline. " + e.getMessage());
         }
         //   Lookup new successor --> Set as successor
         //   Lookup Successor's predecessor --> Set pred's Successor to this node.
-        LOGGER.addHandler(LoggerUtil.getFh());
-        LOGGER.info("Node created");
     }
 
     private void initializeNode() {
+        LOGGER.addHandler(LoggerUtil.getFh());
+        LOGGER.info("Initializing Node");
         id = generateHash(address);
         addresses = new CopyOnWriteArrayList<>();
         successorList = new CopyOnWriteArrayList<>();
@@ -126,7 +125,7 @@ public class Node {
                         dataUpdateThread.interrupt();
                     } catch (NodeOfflineException e) {
                         //TODO if node is offline try next successor
-                        e.printStackTrace();
+                        LOGGER.severe("Node is offline: " + e.getMessage());
                     }
                 }
             }
@@ -139,7 +138,7 @@ public class Node {
                 }
             }
         } catch (NoValueException e) {
-            System.out.println("No Value");
+            LOGGER.warning("DataSource have 'No Value'");
         }
     }
 
@@ -162,7 +161,7 @@ public class Node {
             Runnable successorListMaintainerThread = () -> maintainLists();
             new Thread(successorListMaintainerThread).start();
         } catch (NodeOfflineException e) {
-            e.printStackTrace();
+            LOGGER.severe("Node Offline: " + e.getMessage());
         }
     }
 
@@ -171,14 +170,12 @@ public class Node {
             int sleepTime = 5000;
             double random = Math.random() * sleepTime;
             try {
-                System.out.println("I'm sleeping for " + (sleepTime + random) / 1000 + " seconds... Zzz");
+                LOGGER.finest("Sleeping for " + (sleepTime + random) + " ms");
                 Thread.sleep((long) (sleepTime + random));
                 upsertFingerTable(false);
-                System.out.println("Done upserting fingerblasters bois, back to sleep for " + (sleepTime + random) / 1000 + " seconds... Zzz");
+                LOGGER.finest("Sleeping for " + (sleepTime + random) + " ms");
                 Thread.sleep((long) (sleepTime + random));
-                System.out.println("I'm awake! Let's update some successors!");
                 upsertSuccessorList();
-                System.out.println("Done upserting succs bois, back to sleep.");
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
@@ -186,6 +183,7 @@ public class Node {
     }
 
     private void upsertSuccessorList() {
+        LOGGER.info("Upserting Successor List");
         //Sorry
         //Add successors successorlist as this node's (after the first successor)
 
@@ -226,7 +224,7 @@ public class Node {
             try {
                 pushResourceToSuccessors(storage.getValue(ChordStorage.ID_KEY), storage.getValue(ChordStorage.TOKEN_KEY));
             } catch (NoValueException e) {
-                System.out.println("No value");
+                LOGGER.warning("DataSource have 'No Value'");
             }
         }
         updated = false;
@@ -253,6 +251,7 @@ public class Node {
     }
 
     private void upsertFingerTable(boolean first) {
+        LOGGER.info("Upserting Fingertable");
         int fingerTableSize = (int) (Math.log(IDSPACE) / Math.log(2));
         for (int i = 0; i < fingerTableSize; i++) {
             int lookupID = (id + (int) (Math.pow(2, i))) % IDSPACE;
@@ -262,7 +261,7 @@ public class Node {
                 try {
                     performLookup(getSuccessor(), lookupID, address, new JSONProperties("linear", 0, false));
                 } catch (NodeOfflineException e) {
-                    System.out.println("upsertFingerTable failed. " + getSuccessor() + " is offline");
+                    LOGGER.severe("upsertFingerTable failed. " + getSuccessor() + " is offline");
                 }
             }
         }
@@ -284,12 +283,13 @@ public class Node {
             postjson.put(JSONFormat.VALUE, value);
             httpUtil.httpPostRequest(address, postjson);
         } catch (NodeOfflineException e) {
-            System.out.println("Failed updateNeighbor, " + address + " is offline");
+            LOGGER.warning("Failed updateNeighbor, " + address + " is offline");
 
         }
     }
 
     public void leaveRing() {
+        LOGGER.info("Node is leaving ring.");
         // Find predecessor and set its Successor to this node's Successor
         updateNeighbor(JSONFormat.SUCCESSOR, getSuccessor(), getPredecessor() + ChordResource.SUCCESSORPATH);
         // and set pred of succ to this node's pred
@@ -303,10 +303,10 @@ public class Node {
                 httpUtil.httpPutRequest(successorList.get(0) + "/" + ChordResource.RESOURCEPATH, json);
             } catch (NodeOfflineException e) {
                 //TODO if node is offline try next successor
-                e.printStackTrace();
+                LOGGER.severe("Node Offline: " + e.getMessage());
             } catch (NoValueException e) {
                 // Should never happen
-                e.printStackTrace();
+                LOGGER.severe("Data Source 'No Value'" + e.getMessage());
             }
         }
         storage.shutdown();
@@ -316,6 +316,7 @@ public class Node {
     }
 
     public void killNode() {
+        LOGGER.info("Kill node");
         System.exit(0);
     }
 
@@ -332,7 +333,7 @@ public class Node {
                 try {
                     performLookup(getSuccessor(), key, initiator, jsonProperties);
                 } catch (NodeOfflineException e) {
-                    System.out.println("Linear node lookup on " + getSuccessor() + " failed. initiator: " + initiator + " currentSender: " + address);
+                    LOGGER.info("Linear node lookup on " + getSuccessor() + " failed. initiator: " + initiator + " currentSender: " + address);
                     upsertSuccessorList();
                 }
             } else {
@@ -349,7 +350,7 @@ public class Node {
                 try {
                     performLookup(lookupFinger.getAddress(), key, initiator, jsonProperties);
                 } catch (NodeOfflineException e) {
-                    System.out.println("Fingertable node lookup on " + lookupFinger.getAddress() + " failed. initiator: " + initiator + " currentSender: " + address);
+                    LOGGER.info("Fingertable node lookup on " + lookupFinger.getAddress() + " failed. initiator: " + initiator + " currentSender: " + address);
                     upsertFingerTable(false);
                 }
 

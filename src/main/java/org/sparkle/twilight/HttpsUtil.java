@@ -26,6 +26,7 @@ import java.security.KeyManagementException;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertificateException;
+import java.util.logging.Logger;
 
 /**
  * Created by Kresten on 21-02-2017.
@@ -33,8 +34,10 @@ import java.security.cert.CertificateException;
 public class HttpsUtil {
     private HttpClient client;
     private final int connectionTimeout = 3000;
+    private static final Logger LOGGER = Logger.getLogger(HttpsUtil.class.getName());
 
     public HttpsUtil() {
+        LOGGER.addHandler(LoggerUtil.getFh());
         try {
             client = new HttpsClientFactory().getHttpsClient();
         } catch (KeyStoreException e) {
@@ -65,10 +68,10 @@ public class HttpsUtil {
             StringEntity params = new StringEntity(body.toJSONString());
             msgType.addHeader("content-type", JSONFormat.JSON);
             msgType.setEntity(params);
+            LOGGER.finer("Send " +msgType+ " message to " +url);
             HttpResponse response = client.execute(msgType);
             if (response.getStatusLine().getStatusCode() != 200) {
-                System.out.println(response.getStatusLine().getStatusCode());
-                System.out.println("ERROR ERROR " + url);
+                LOGGER.warning("HTTP response is: " + response.getStatusLine().getStatusCode());
             }
         } catch (HttpHostConnectException | ConnectTimeoutException | SocketTimeoutException e) {
             throw new NodeOfflineException();
@@ -84,9 +87,11 @@ public class HttpsUtil {
     public JSONObject httpGetRequest(String url) throws NodeOfflineException {
         HttpGet getMsg = new HttpGet(url);
         try {
+            LOGGER.finer("Send GET message to " +url);
             HttpResponse response = client.execute(getMsg);
-            if (response.getStatusLine().getStatusCode() != 200) {
-                System.out.println("ERROR ERROR: Could not get");
+            int sc = response.getStatusLine().getStatusCode();
+            if (sc != 200) {
+                LOGGER.severe("Get request failed with status code " + sc);
             }
             BufferedReader reader = new BufferedReader(
                     new InputStreamReader(
@@ -106,6 +111,7 @@ public class HttpsUtil {
         } catch (ParseException e) {
             e.printStackTrace();
         }
-        return null; //TODO fix mabye?
+        LOGGER.severe("TODO fix mabye?");
+        return null;
     }
 }
