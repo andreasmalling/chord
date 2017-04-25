@@ -4,9 +4,12 @@ import org.glassfish.hk2.api.Immediate;
 import org.glassfish.jersey.server.mvc.Template;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
+import org.json.simple.parser.ParseException;
 
 import javax.inject.Singleton;
 import javax.ws.rs.*;
+import javax.ws.rs.core.Response;
 
 @Path(value = "/app/")
 @Singleton
@@ -29,7 +32,22 @@ public class AppResource {
     @GET
     @Produces(JSONFormat.JSON)
     public String getIndexJson() {
-        return "";
+        return app.getIndex().toJSONString();
+    }
+
+    @POST
+    @Consumes(JSONFormat.JSON)
+    public Response appendToIndex(String request) {
+        System.out.println("received appendToIndex request");
+        JSONParser parser = new JSONParser();
+        try {
+            JSONObject jRequest = (JSONObject) parser.parse(request);
+            app.addNewTopicToIndex(jRequest);
+        } catch (ParseException e) {
+            e.printStackTrace();
+            return Response.status(400).build(); //Code 400: Bad Request due to malformed JSON
+        }
+        return Response.ok().build();
     }
 
     @Path("posttopic")
@@ -51,7 +69,7 @@ public class AppResource {
     @Path("{id}")
     @Produces(JSONFormat.JSON)
     public String getTopicJson(@PathParam("id") String id) {
-        return "";
+        return app.getTopic(id).toJSONString();
     }
 
     @Path("{id}/reply")

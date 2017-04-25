@@ -146,14 +146,14 @@ public class Node {
             int sleepTime = 5000;
             double random = Math.random() * sleepTime;
             try {
-                System.out.println("I'm sleeping for " + (sleepTime + random) / 1000 + " seconds... Zzz");
+                //System.out.println("I'm sleeping for " + (sleepTime + random) / 1000 + " seconds... Zzz");
                 Thread.sleep((long) (sleepTime + random));
                 upsertFingerTable(false);
-                System.out.println("Done upserting fingerblasters bois, back to sleep for " + (sleepTime + random) / 1000 + " seconds... Zzz");
+                //System.out.println("Done upserting fingerblasters bois, back to sleep for " + (sleepTime + random) / 1000 + " seconds... Zzz");
                 Thread.sleep((long) (sleepTime + random));
-                System.out.println("I'm awake! Let's update some successors!");
+                //System.out.println("I'm awake! Let's update some successors!");
                 upsertSuccessorList();
-                System.out.println("Done upserting succs bois, back to sleep.");
+                //System.out.println("Done upserting succs bois, back to sleep.");
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
@@ -321,7 +321,7 @@ public class Node {
         }
     }
 
-    private boolean isMyKey(int key) {
+    public boolean isMyKey(int key) {
         if (predecessorId == id) {
             //only one in chord
             return true;
@@ -376,10 +376,15 @@ public class Node {
         return instructionMap;
     }
 
+    public void addInstruction(Integer key, Instruction inst) {
+        instructionMap.put(key,inst);
+    }
+
     public void executeInstruction(Instruction inst, String address) {
         String url = address + inst.getTarget();
         JSONObject body = inst.getBody();
         Instruction.Method method = inst.getMethod();
+        System.out.println("executing instruction:\nURL: "+ url + "\nmethod: " + method + "\nbody:\n" + body.toJSONString());
         try {
             switch (method) {
                 case GET:

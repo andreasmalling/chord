@@ -43,17 +43,38 @@ public class App {
     }
 
     private void addTopic(String key, JSONObject topicJson) {
-        //TODO add check if responsible otherwise redirect
-        ChordStorage storage = node.getStorage();
-        storage.putObject(key,topicJson);
+        System.out.println("handling topic with key: " + key);
+        Integer intKey = Integer.parseInt(key);
+        if (node.isMyKey(intKey)) {
+            ChordStorage storage = node.getStorage();
+            storage.putObject(key, topicJson);
+        } else {
+            System.out.println("REDIRECTED");
+            JSONObject packedJson = new JSONObject();
+            packedJson.put(JSONFormat.VALUE,topicJson);
+            //TODO make proxy handle this
+            node.lookup(intKey, node.address,new JSONProperties());
+            Instruction inst = new Instruction(Instruction.Method.POST,packedJson,"database/" + key);
+            node.addInstruction(intKey,inst);
+        }
     }
 
     public void addNewTopicToIndex(JSONObject topic) {
-        //TODO add check if responsible otherwise redirect
-        ChordStorage storage = node.getStorage();
-        Object index = storage.getObject(INDEXKEY);
-        ((JSONArray) index).add(topic);
-        storage.putObject(INDEXKEY,index);
+        System.out.println("handling index");
+        int intIndexKey = Integer.parseInt(INDEXKEY);
+        if (node.isMyKey(intIndexKey)) {
+            System.out.println("adding: " + topic.toJSONString() + " to index");
+            ChordStorage storage = node.getStorage();
+            Object index = storage.getObject(INDEXKEY);
+            ((JSONArray) index).add(topic);
+            storage.putObject(INDEXKEY, index);
+        } else {
+            System.out.println("REDIRECTED");
+            //TODO make proxy handle this
+            node.lookup(intIndexKey, node.address, new JSONProperties());
+            Instruction inst = new Instruction(Instruction.Method.POST,topic, "app/");
+            node.addInstruction(intIndexKey,inst);
+        }
     }
 
 
