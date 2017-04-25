@@ -25,6 +25,7 @@ public class AppResource {
     @GET
     @Produces("text/html")
     public IndexContext getIndexHtml() {
+        app.updateIndex();
         JSONArray index = app.getIndex();
         return new IndexContext(index);
     }
@@ -52,15 +53,18 @@ public class AppResource {
 
     @Path("posttopic")
     @POST
+    @Consumes("application/x-www-form-urlencoded")
     public void postTopicForm(@FormParam("title") String title, @FormParam("message") String message) {
         app.postTopic(title,message);
     }
+
 
     @Template(name = "/appTopic.mustache")
     @GET
     @Path("{id}")
     @Produces("text/html")
     public TopicContext getTopicHtml(@PathParam("id") String id) {
+        app.updateTopic(id);
         JSONObject topic = app.getTopic(id);
         return new TopicContext(topic, id);
     }
@@ -74,8 +78,27 @@ public class AppResource {
 
     @Path("{id}/reply")
     @POST
+    @Consumes("application/x-www-form-urlencoded")
     public void replyToTopic(@PathParam("id") String id, @FormParam("message") String message) {
         app.replyToTopic(id,message);
+    }
+
+    //TODO TEST DIS
+    @Path("{id}/reply")
+    @POST
+    @Consumes(JSONFormat.JSON)
+    public Response postTopicReply(String request, @PathParam("id") String id) {
+        System.out.println("received append reply request on id:" + id);
+        JSONParser parser = new JSONParser();
+        try {
+            JSONObject jRequest = (JSONObject) parser.parse(request);
+            String message = (String) jRequest.get(JSONFormat.MESSAGE);
+            app.replyToTopic(id,message);
+        } catch (ParseException e) {
+            e.printStackTrace();
+            return Response.status(400).build(); //Code 400: Bad Request due to malformed JSON
+        }
+        return Response.ok().build();
     }
 
 

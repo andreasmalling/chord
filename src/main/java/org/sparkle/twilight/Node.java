@@ -26,6 +26,7 @@ public class Node {
     private List<Finger> fingerTable;
 
     private ConcurrentHashMap<Integer, Instruction> instructionMap;
+    private ConcurrentHashMap<String, String> updateMap;
     private final int successorListLength = 5;
 
     private ChordStorage storage;
@@ -59,6 +60,7 @@ public class Node {
         fingerTable = new CopyOnWriteArrayList<>();
         instructionMap = new ConcurrentHashMap<>();
         storage = new ChordStorage(String.valueOf(id));
+        updateMap = new ConcurrentHashMap<>();
 
         upsertFingerTable(true);
     }
@@ -389,6 +391,8 @@ public class Node {
             switch (method) {
                 case GET:
                     //not handled and doesn't make sense to do here because you cant get the response
+                    //TODO hacky fix so that we can do async gets, Kresten plz fix
+                    updateMap.put((String) body.get(JSONFormat.ID),url); //store lookup id in the body ex: {id: 45}
                     break;
                 case POST:
                     httpUtil.httpPostRequest(url, body);
@@ -430,4 +434,9 @@ public class Node {
             }
         }
     }
+
+    public ConcurrentHashMap<String, String> getUpdateMap() {
+        return updateMap;
+    }
+
 }

@@ -4,13 +4,20 @@ package org.sparkle.twilight;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 
+import java.util.concurrent.ConcurrentHashMap;
+
+import static org.sparkle.twilight.Main.httpUtil;
+
 public class App {
 
+    private final ConcurrentHashMap<String, String> updateMap;
     private Node node;
     private static final String INDEXKEY = "0";
+    private final int RETRIES = 5;
 
     public App(Node node) {
         this.node = node;
+        updateMap = node.getUpdateMap(); //K=id, V=address
     }
 
     public JSONArray getIndex() {
@@ -88,5 +95,47 @@ public class App {
         JSONArray replyList = (JSONArray) topic.get(JSONFormat.REPLIES);
         replyList.add(messageJson);
         storage.putObject(id,topic);
+    }
+
+    public void updateIndex() {
+        updateMap.put(INDEXKEY,null);
+        int intIndexKey = Integer.parseInt(INDEXKEY);
+        //TODO make proxy handle this
+        node.lookup(intIndexKey, node.address, new JSONProperties());
+        JSONObject jsonId = new JSONObject();
+        jsonId.put(JSONFormat.ID,INDEXKEY);;
+        Instruction inst = new Instruction(Instruction.Method.GET,jsonId,"app/");
+        node.addInstruction(intIndexKey,inst);
+
+        //hacky async get
+        for (int i=0; i<=RETRIES;i++) {
+            try {
+                Thread.sleep((long) (10 * Math.pow(2,i))); //increasing sleep time
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            if (!updateMap.get(INDEXKEY).equals(null)) {
+                System.out.println("index updated");
+                break;
+            }
+            System.out.println("failed to update index, trying again");
+        }
+        try {
+            JSONObject updatedIndex = httpUtil.httpGetRequest(updateMap.get(INDEXKEY));
+            if (updatedIndex==null) {
+                System.out.println("failed to update index");
+                return;
+            }
+            ChordStorage storage = node.getStorage();
+            storage.putObject(INDEXKEY, updatedIndex);
+        } catch (NodeOfflineException e) {
+            e.printStackTrace();
+        }
+        updateMap.remove(INDEXKEY);
+
+    }
+
+    public void updateTopic(String id) {
+        //updateMap.put(id,null);
     }
 }
