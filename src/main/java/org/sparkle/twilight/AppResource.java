@@ -25,6 +25,7 @@ public class AppResource {
     @GET
     @Produces("text/html")
     public IndexContext getIndexHtml() {
+        System.out.println("\033[32mHTML\033[0m");
         app.updateIndex();
         JSONArray index = app.getIndex();
         return new IndexContext(index);
@@ -33,7 +34,10 @@ public class AppResource {
     @GET
     @Produces(JSONFormat.JSON)
     public String getIndexJson() {
-        return app.getIndex().toJSONString();
+        System.out.println("\033[32mJSON\033[0m");
+        JSONObject packedJson = new JSONObject(); //pack the jsonarray so that our httpclient supports it
+        packedJson.put(JSONFormat.VALUE,app.getIndex());
+        return packedJson.toJSONString();
     }
 
     @POST

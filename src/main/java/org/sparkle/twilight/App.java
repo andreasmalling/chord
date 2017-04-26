@@ -98,8 +98,12 @@ public class App {
     }
 
     public void updateIndex() {
-        updateMap.put(INDEXKEY,null);
         int intIndexKey = Integer.parseInt(INDEXKEY);
+        if (node.isMyKey(intIndexKey)) {
+            System.out.println("index update skipped...");
+            return;
+        }
+        updateMap.put(INDEXKEY,"");
         //TODO make proxy handle this
         node.lookup(intIndexKey, node.address, new JSONProperties());
         JSONObject jsonId = new JSONObject();
@@ -110,20 +114,26 @@ public class App {
         //hacky async get
         for (int i=0; i<=RETRIES;i++) {
             try {
-                Thread.sleep((long) (10 * Math.pow(2,i))); //increasing sleep time
+                Thread.sleep((long) (100 * Math.pow(2,i))); //increasing sleep time
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
-            if (!updateMap.get(INDEXKEY).equals(null)) {
-                System.out.println("index updated");
+            if (!updateMap.get(INDEXKEY).equals("")) {
+                System.out.println("updated index");
                 break;
             }
             System.out.println("failed to update index, trying again");
         }
         try {
-            JSONObject updatedIndex = httpUtil.httpGetRequest(updateMap.get(INDEXKEY));
+            String address = updateMap.get(INDEXKEY);
+            if (address.equals("")) {
+                System.out.println("%%%failed to update index");
+                return;
+            }
+            JSONObject response = httpUtil.httpGetRequest(address);
+            JSONArray updatedIndex = (JSONArray) response.get(JSONFormat.VALUE);
             if (updatedIndex==null) {
-                System.out.println("failed to update index");
+                System.out.println("***failed to update index");
                 return;
             }
             ChordStorage storage = node.getStorage();
@@ -131,8 +141,7 @@ public class App {
         } catch (NodeOfflineException e) {
             e.printStackTrace();
         }
-        updateMap.remove(INDEXKEY);
-
+        //updateMap.remove(INDEXKEY);
     }
 
     public void updateTopic(String id) {

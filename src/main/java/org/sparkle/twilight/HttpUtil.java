@@ -69,6 +69,7 @@ public class HttpUtil {
 
     public JSONObject httpGetRequest(String url) throws NodeOfflineException {
         HttpGet getMsg = new HttpGet(url);
+        getMsg.addHeader("Accept", JSONFormat.JSON); //required if we want to do the M2M vs H2M rest stuff
         try {
             HttpResponse response = client.execute(getMsg);
             if (response.getStatusLine().getStatusCode() != 200) {
