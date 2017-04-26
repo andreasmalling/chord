@@ -88,13 +88,19 @@ public class App {
     public void replyToTopic(String id, String message) {
         JSONObject messageJson = new JSONObject();
         messageJson.put(JSONFormat.MESSAGE,message);
-
-        //TODO add check if responsible otherwise redirect
-        ChordStorage storage = node.getStorage();
-        JSONObject topic = (JSONObject) storage.getObject(id);
-        JSONArray replyList = (JSONArray) topic.get(JSONFormat.REPLIES);
-        replyList.add(messageJson);
-        storage.putObject(id,topic);
+        int intKey = Integer.parseInt(id);
+        if (node.isMyKey(intKey)) {
+            ChordStorage storage = node.getStorage();
+            JSONObject topic = (JSONObject) storage.getObject(id);
+            JSONArray replyList = (JSONArray) topic.get(JSONFormat.REPLIES);
+            replyList.add(messageJson);
+            storage.putObject(id, topic);
+        } else {
+            //TODO make proxy handle this
+            node.lookup(intKey, node.address, new JSONProperties());
+            Instruction inst = new Instruction(Instruction.Method.POST,messageJson,"app/"+id+"/reply");
+            node.addInstruction(intKey,inst);
+        }
     }
 
     public void updateIndex() {
@@ -112,18 +118,7 @@ public class App {
         node.addInstruction(intIndexKey,inst);
 
         //hacky async get
-        for (int i=0; i<=RETRIES;i++) {
-            try {
-                Thread.sleep((long) (100 * Math.pow(2,i))); //increasing sleep time
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-            if (!updateMap.get(INDEXKEY).equals("")) {
-                System.out.println("updated index");
-                break;
-            }
-            System.out.println("failed to update index, trying again");
-        }
+        waitForUpdate(INDEXKEY);
         try {
             String address = updateMap.get(INDEXKEY);
             if (address.equals("")) {
@@ -141,10 +136,57 @@ public class App {
         } catch (NodeOfflineException e) {
             e.printStackTrace();
         }
-        //updateMap.remove(INDEXKEY);
     }
 
+    //TODO refactor less copypasta
     public void updateTopic(String id) {
-        //updateMap.put(id,null);
+        int intKey = Integer.parseInt(id);
+        if (node.isMyKey(intKey)) {
+            System.out.println("topic " + id + " update skipped...");
+            return;
+        }
+        updateMap.put(id,"");
+        //TODO make proxy handle this
+        node.lookup(intKey, node.address, new JSONProperties());
+        JSONObject jsonId = new JSONObject();
+        jsonId.put(JSONFormat.ID,id);;
+        Instruction inst = new Instruction(Instruction.Method.GET,jsonId,"app/" + id);
+        node.addInstruction(intKey,inst);
+
+        //hacky async get
+        waitForUpdate(id);
+        try {
+            String address = updateMap.get(id);
+            if (address.equals("")) {
+                System.out.println("%%%failed to update topic " + id);
+                return;
+            }
+            JSONObject topicJson = httpUtil.httpGetRequest(address);
+            if (topicJson==null) {
+                System.out.println("***failed to update topic " + id);
+                return;
+            }
+            ChordStorage storage = node.getStorage();
+            storage.putObject(id, topicJson);
+        } catch (NodeOfflineException e) {
+            e.printStackTrace();
+        }
     }
+
+
+    private void waitForUpdate(String key) {
+        for (int i=0; i<=RETRIES;i++) {
+            try {
+                Thread.sleep((long) (100 * Math.pow(2,i))); //increasing sleep time
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            if (!updateMap.get(key).equals("")) {
+                System.out.println("updated index");
+                break;
+            }
+            System.out.println("failed to update index, trying again");
+        }
+    }
+
 }
