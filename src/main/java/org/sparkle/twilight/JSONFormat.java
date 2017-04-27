@@ -16,4 +16,6 @@ public class JSONFormat {
     public static final String ID = "id";
     public static final String MESSAGE = "message";
     public static final String REPLIES = "replies";
+    public static final String TIMESTAMP = "timestamp";
+    public static final String VIEW = "timestampview";
 }

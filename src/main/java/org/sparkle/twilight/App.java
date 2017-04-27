@@ -11,6 +11,7 @@ import static org.sparkle.twilight.Main.httpUtil;
 public class App {
 
     private final ConcurrentHashMap<String, String> updateMap;
+    private final ConcurrentHashMap<String, Long> timeStampViewMap;
     private Node node;
     private static final String INDEXKEY = "0";
     private static String NULLADDR = "";
@@ -19,6 +20,7 @@ public class App {
     public App(Node node) {
         this.node = node;
         updateMap = node.getUpdateMap(); //K=id, V=address
+        timeStampViewMap = new ConcurrentHashMap<>();
     }
 
     public JSONArray getIndex() {
@@ -47,6 +49,7 @@ public class App {
         topicJson.put(JSONFormat.TITLE,title);
         topicJson.put(JSONFormat.MESSAGE,message);
         topicJson.put(JSONFormat.REPLIES,new JSONArray());
+        topicJson.put(JSONFormat.TIMESTAMP,0L);
         addTopic(messageId + "",topicJson);
     }
 
@@ -89,14 +92,19 @@ public class App {
     }
 
 
-    public void replyToTopic(String id, String message) {
+    public void replyToTopic(String id, String message, long view) {
         JSONObject messageJson = new JSONObject();
         messageJson.put(JSONFormat.MESSAGE,message);
+        messageJson.put(JSONFormat.VIEW,view);
         int intKey = Integer.parseInt(id);
         if (node.isMyKey(intKey)) {
             ChordStorage storage = node.getStorage();
             JSONObject topic = (JSONObject) storage.getObject(id);
+            long timestamp = (long) topic.get(JSONFormat.TIMESTAMP);
+            timestamp++;
+            topic.put(JSONFormat.TIMESTAMP,timestamp);
             JSONArray replyList = (JSONArray) topic.get(JSONFormat.REPLIES);
+            messageJson.put(JSONFormat.TIMESTAMP,timestamp);
             replyList.add(messageJson);
             storage.putObject(id, topic);
         } else {
@@ -137,6 +145,7 @@ public class App {
             }
             ChordStorage storage = node.getStorage();
             storage.putObject(INDEXKEY, updatedIndex);
+            //TODO mabye timestamp index???????
         } catch (NodeOfflineException e) {
             e.printStackTrace();
         }
@@ -147,6 +156,9 @@ public class App {
         int intKey = Integer.parseInt(id);
         if (node.isMyKey(intKey)) {
             System.out.println("topic " + id + " update skipped...");
+            JSONObject topicJson = getTopic(id);
+            long view = (long) topicJson.get(JSONFormat.TIMESTAMP);
+            timeStampViewMap.put(id,view);
             return;
         }
         updateMap.put(id,"");
@@ -172,11 +184,21 @@ public class App {
             }
             ChordStorage storage = node.getStorage();
             storage.putObject(id, topicJson);
+            long view = (long) topicJson.get(JSONFormat.TIMESTAMP);
+            timeStampViewMap.put(id,view);
         } catch (NodeOfflineException e) {
             e.printStackTrace();
         }
     }
 
+    public long getView(String key) {
+        Object oView = timeStampViewMap.get(key);
+        if (oView==null) {
+            return 0;
+        } else {
+            return (long) oView;
+        }
+    }
 
     private void waitForUpdate(String key) {
         for (int i=0; i<=RETRIES;i++) {

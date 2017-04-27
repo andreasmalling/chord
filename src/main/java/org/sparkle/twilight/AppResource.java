@@ -84,7 +84,8 @@ public class AppResource {
     @POST
     @Consumes("application/x-www-form-urlencoded")
     public void replyToTopic(@PathParam("id") String id, @FormParam("message") String message) {
-        app.replyToTopic(id,message);
+        long view = app.getView(id);
+        app.replyToTopic(id,message,view);
     }
 
     //TODO TEST DIS
@@ -97,7 +98,8 @@ public class AppResource {
         try {
             JSONObject jRequest = (JSONObject) parser.parse(request);
             String message = (String) jRequest.get(JSONFormat.MESSAGE);
-            app.replyToTopic(id,message);
+            long view = (long) jRequest.get(JSONFormat.VIEW);
+            app.replyToTopic(id,message,view);
         } catch (ParseException e) {
             e.printStackTrace();
             return Response.status(400).build(); //Code 400: Bad Request due to malformed JSON
@@ -122,11 +124,13 @@ public class AppResource {
         public String title;
         public String message;
         public JSONArray replies;
+        public long timestamp;
 
         public TopicContext(JSONObject topic, String id) {
             title = (String) topic.get(JSONFormat.TITLE);
             message = (String) topic.get(JSONFormat.MESSAGE);
             replies = (JSONArray) topic.get(JSONFormat.REPLIES);
+            timestamp = (long) topic.get(JSONFormat.TIMESTAMP);
             this.id = id;
         }
     }
