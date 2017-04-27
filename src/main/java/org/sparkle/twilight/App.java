@@ -13,6 +13,7 @@ public class App {
     private final ConcurrentHashMap<String, String> updateMap;
     private Node node;
     private static final String INDEXKEY = "0";
+    private static String NULLADDR = "";
     private final int RETRIES = 5;
 
     public App(Node node) {
@@ -73,6 +74,9 @@ public class App {
             System.out.println("adding: " + topic.toJSONString() + " to index");
             ChordStorage storage = node.getStorage();
             Object index = storage.getObject(INDEXKEY);
+            if (index== null) {
+                index = new JSONArray(); //create index array if it doesn't exist
+            }
             ((JSONArray) index).add(topic);
             storage.putObject(INDEXKEY, index);
         } else {
@@ -121,7 +125,7 @@ public class App {
         waitForUpdate(INDEXKEY);
         try {
             String address = updateMap.get(INDEXKEY);
-            if (address.equals("")) {
+            if (address.equals(NULLADDR)) {
                 System.out.println("%%%failed to update index");
                 return;
             }
@@ -157,7 +161,7 @@ public class App {
         waitForUpdate(id);
         try {
             String address = updateMap.get(id);
-            if (address.equals("")) {
+            if (address.equals(NULLADDR)) {
                 System.out.println("%%%failed to update topic " + id);
                 return;
             }
@@ -181,8 +185,8 @@ public class App {
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
-            if (!updateMap.get(key).equals("")) {
-                System.out.println("updated index");
+            if (!updateMap.get(key).equals(NULLADDR)) {
+                System.out.println("updating...");
                 break;
             }
             System.out.println("failed to update index, trying again");
