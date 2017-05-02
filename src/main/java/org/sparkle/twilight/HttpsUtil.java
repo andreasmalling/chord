@@ -37,7 +37,7 @@ public class HttpsUtil {
     private static final Logger LOGGER = Logger.getLogger(HttpsUtil.class.getName());
 
     public HttpsUtil() {
-        LOGGER.addHandler(LoggerUtil.getFh());
+        LoggerHandlers.addHandlers(LOGGER);
         try {
             client = new HttpsClientFactory().getHttpsClient();
         } catch (KeyStoreException e) {

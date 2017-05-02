@@ -57,7 +57,7 @@ public class Node {
     }
 
     private void initializeNode() {
-        LOGGER.addHandler(LoggerUtil.getFh());
+        LoggerHandlers.addHandlers(LOGGER);
         LOGGER.info("Initializing Node");
         id = generateHash(address);
         addresses = new CopyOnWriteArrayList<>();
@@ -138,7 +138,7 @@ public class Node {
                 }
             }
         } catch (NoValueException e) {
-            LOGGER.warning("DataSource have 'No Value'");
+            LOGGER.warning("DataSource have ´No Value´");
         }
     }
 

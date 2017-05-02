@@ -25,8 +25,9 @@ public class SQLiteHandler extends Handler {
     @Override
     public void publish(LogRecord record) {
         try {
-            connection.createStatement().execute("INSERT INTO Logs (CLASS, METHOD, TIME, MESSAGE, LEVEL) " +
-                    "VALUES ('"+ record.getSourceClassName()
+            connection.createStatement().execute("INSERT INTO Logs (NODE ,CLASS, METHOD, TIME, MESSAGE, LEVEL) " +
+                    "VALUES ('"+Main.BASE_PORT
+                    +"','"+record.getSourceClassName()
                     +"','"+record.getSourceMethodName()
                     +"','"+record.getMillis()
                     +"','"+record.getMessage()

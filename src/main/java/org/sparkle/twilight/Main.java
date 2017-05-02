@@ -85,8 +85,7 @@ public class Main {
             BASE_URI = "https://localhost:" + BASE_PORT + "/";
         }
 
-        LoggerUtil lu = new LoggerUtil(BASE_PORT);
-        LOGGER.addHandler(LoggerUtil.getFh());
+        LoggerHandlers.addHandlers(LOGGER);
 
         httpUtil = new HttpsUtil();
         server = startSecureServer();

@@ -15,15 +15,15 @@ public class SQLiteUtil {
     private SQLiteDataSource dataSource = null;
     public SQLiteHandler SQLiteHandler;
 
-    public SQLiteUtil(String BASE_PORT) {
+    public SQLiteUtil(String logname) {
         try {
             Class.forName("org.sqlite.JDBC");
             boolean initialize = SQLiteJDBCLoader.initialize();
             SQLiteDataSource ds = new SQLiteDataSource();
-            ds.setUrl("jdbc:sqlite:./log/logs_"+BASE_PORT+".db");
+            ds.setUrl("jdbc:sqlite:./log/" + logname + ".db");
             Connection conn = ds.getConnection();
             Statement st = conn.createStatement();
-            st.execute("CREATE TABLE IF NOT EXISTS Logs (ID INTEGER PRIMARY KEY ASC, CLASS CHAR , METHOD CHAR, " +
+            st.execute("CREATE TABLE IF NOT EXISTS Logs (ID INTEGER PRIMARY KEY ASC, NODE INTEGER, CLASS CHAR , METHOD CHAR, " +
                            "TIME DATE, MESSAGE CHAR, LEVEL CHAR);");
             st.close();
             connection = conn;

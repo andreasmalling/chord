@@ -6,6 +6,7 @@ import org.junit.Test;
 
 import javax.validation.constraints.AssertFalse;
 import java.sql.SQLException;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import static org.junit.Assert.*;
@@ -33,6 +34,7 @@ public class SQLiteUtilTest {
     public void TestDBInsertWithLogger(){
        Logger l = Logger.getLogger(Class.class.getName());
        l.addHandler(SU.SQLiteHandler);
-       l.info("This is a test");
+       l.setLevel(Level.FINE);
+       l.fine("This is a test");
     }
 }
