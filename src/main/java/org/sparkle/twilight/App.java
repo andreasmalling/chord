@@ -51,17 +51,17 @@ public class App {
 
         //generate json for index
         JSONObject indexJson = new JSONObject();
-        indexJson.put(JSONFormat.TITLE,title);
+        indexJson.put(JSONFormat.TITLE, title);
         indexJson.put(JSONFormat.ID, messageId);
         addNewTopicToIndex(indexJson);
 
         //generate json for topic
         JSONObject topicJson = new JSONObject();
-        topicJson.put(JSONFormat.TITLE,title);
-        topicJson.put(JSONFormat.MESSAGE,message);
-        topicJson.put(JSONFormat.REPLIES,new JSONArray());
-        topicJson.put(JSONFormat.TIMESTAMP,0L);
-        addTopic(messageId + "",topicJson);
+        topicJson.put(JSONFormat.TITLE, title);
+        topicJson.put(JSONFormat.MESSAGE, message);
+        topicJson.put(JSONFormat.REPLIES, new JSONArray());
+        topicJson.put(JSONFormat.TIMESTAMP, 0L);
+        addTopic(messageId + "", topicJson);
     }
 
     private void addTopic(String key, JSONObject topicJson) {
@@ -73,11 +73,11 @@ public class App {
         } else {
             System.out.println("REDIRECTED");
             JSONObject packedJson = new JSONObject();
-            packedJson.put(JSONFormat.VALUE,topicJson);
+            packedJson.put(JSONFormat.VALUE, topicJson);
             //TODO make proxy handle this
-            node.lookup(intKey, node.address,new JSONProperties());
-            Instruction inst = new Instruction(Instruction.Method.POST,packedJson,"database/" + key);
-            node.addInstruction(intKey,inst);
+            node.lookup(intKey, node.address, new JSONProperties());
+            Instruction inst = new Instruction(Instruction.Method.POST, packedJson, "database/" + key);
+            node.addInstruction(intKey, inst);
         }
     }
 
@@ -88,7 +88,7 @@ public class App {
             System.out.println("adding: " + topic.toJSONString() + " to index");
             ChordStorage storage = node.getStorage();
             Object index = storage.getObject(INDEXKEY);
-            if (index== null) {
+            if (index == null) {
                 index = new JSONArray(); //create index array if it doesn't exist
             }
             ((JSONArray) index).add(topic);
@@ -97,32 +97,32 @@ public class App {
             System.out.println("REDIRECTED");
             //TODO make proxy handle this
             node.lookup(intIndexKey, node.address, new JSONProperties());
-            Instruction inst = new Instruction(Instruction.Method.POST,topic, "app/");
-            node.addInstruction(intIndexKey,inst);
+            Instruction inst = new Instruction(Instruction.Method.POST, topic, "app/");
+            node.addInstruction(intIndexKey, inst);
         }
     }
 
 
-    public void replyToTopic(String id, String message, long view) {
-        JSONObject messageJson = new JSONObject();
-        messageJson.put(JSONFormat.MESSAGE,message);
-        messageJson.put(JSONFormat.VIEW,view);
+    public void replyToTopic(String id, JSONObject message) {
         int intKey = Integer.parseInt(id);
         if (node.isMyKey(intKey)) {
-            ChordStorage storage = node.getStorage();
-            JSONObject topic = (JSONObject) storage.getObject(id);
+            JSONObject topic = getTopic(id);
+            if (!validateReply(message, topic)) {
+                System.out.println("TopicID: " + id + " HAS BEEN HACKED! DON'T TRUST THIS!");
+                return;
+            }
             long timestamp = (long) topic.get(JSONFormat.TIMESTAMP);
             timestamp++;
-            topic.put(JSONFormat.TIMESTAMP,timestamp);
+            topic.put(JSONFormat.TIMESTAMP, timestamp);
             JSONArray replyList = (JSONArray) topic.get(JSONFormat.REPLIES);
-            messageJson.put(JSONFormat.TIMESTAMP,timestamp);
-            replyList.add(messageJson);
-            storage.putObject(id, topic);
+            message.put(JSONFormat.TIMESTAMP, timestamp);
+            replyList.add(message);
+            node.getStorage().putObject(id, topic);
         } else {
             //TODO make proxy handle this
             node.lookup(intKey, node.address, new JSONProperties());
-            Instruction inst = new Instruction(Instruction.Method.POST,messageJson,"app/"+id+"/reply");
-            node.addInstruction(intKey,inst);
+            Instruction inst = new Instruction(Instruction.Method.POST, message, "app/" + id + "/reply");
+            node.addInstruction(intKey, inst);
         }
     }
 
@@ -132,13 +132,14 @@ public class App {
             System.out.println("index update skipped...");
             return;
         }
-        updateMap.put(INDEXKEY,"");
+        updateMap.put(INDEXKEY, "");
         //TODO make proxy handle this
         node.lookup(intIndexKey, node.address, new JSONProperties());
         JSONObject jsonId = new JSONObject();
-        jsonId.put(JSONFormat.ID,INDEXKEY);;
-        Instruction inst = new Instruction(Instruction.Method.GET,jsonId,"app/");
-        node.addInstruction(intIndexKey,inst);
+        jsonId.put(JSONFormat.ID, INDEXKEY);
+        ;
+        Instruction inst = new Instruction(Instruction.Method.GET, jsonId, "app/");
+        node.addInstruction(intIndexKey, inst);
 
         //hacky async get
         waitForUpdate(INDEXKEY);
@@ -150,7 +151,7 @@ public class App {
             }
             JSONObject response = httpUtil.httpGetRequest(address);
             JSONArray updatedIndex = (JSONArray) response.get(JSONFormat.VALUE);
-            if (updatedIndex==null) {
+            if (updatedIndex == null) {
                 System.out.println("***failed to update index");
                 return;
             }
@@ -169,16 +170,17 @@ public class App {
             System.out.println("topic " + id + " update skipped...");
             JSONObject topicJson = getTopic(id);
             long view = (long) topicJson.get(JSONFormat.TIMESTAMP);
-            timeStampViewMap.put(id,view);
+            timeStampViewMap.put(id, view);
             return;
         }
-        updateMap.put(id,"");
+        updateMap.put(id, "");
         //TODO make proxy handle this
         node.lookup(intKey, node.address, new JSONProperties());
         JSONObject jsonId = new JSONObject();
-        jsonId.put(JSONFormat.ID,id);;
-        Instruction inst = new Instruction(Instruction.Method.GET,jsonId,"app/" + id);
-        node.addInstruction(intKey,inst);
+        jsonId.put(JSONFormat.ID, id);
+        ;
+        Instruction inst = new Instruction(Instruction.Method.GET, jsonId, "app/" + id);
+        node.addInstruction(intKey, inst);
 
         //hacky async get
         waitForUpdate(id);
@@ -189,14 +191,14 @@ public class App {
                 return;
             }
             JSONObject topicJson = httpUtil.httpGetRequest(address);
-            if (topicJson==null) {
+            if (topicJson == null) {
                 System.out.println("***failed to update topic " + id);
                 return;
             }
             ChordStorage storage = node.getStorage();
             storage.putObject(id, topicJson);
             long view = (long) topicJson.get(JSONFormat.TIMESTAMP);
-            timeStampViewMap.put(id,view);
+            timeStampViewMap.put(id, view);
         } catch (NodeOfflineException e) {
             e.printStackTrace();
         }
@@ -204,7 +206,7 @@ public class App {
 
     public long getView(String key) {
         Object oView = timeStampViewMap.get(key);
-        if (oView==null) {
+        if (oView == null) {
             return 0;
         } else {
             return (long) oView;
@@ -212,9 +214,9 @@ public class App {
     }
 
     private void waitForUpdate(String key) {
-        for (int i=0; i<=RETRIES;i++) {
+        for (int i = 0; i <= RETRIES; i++) {
             try {
-                Thread.sleep((long) (100 * Math.pow(2,i))); //increasing sleep time
+                Thread.sleep((long) (100 * Math.pow(2, i))); //increasing sleep time
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }

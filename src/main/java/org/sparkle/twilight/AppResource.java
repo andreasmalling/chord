@@ -36,7 +36,7 @@ public class AppResource {
     public String getIndexJson() {
         System.out.println("\033[32mJSON\033[0m");
         JSONObject packedJson = new JSONObject(); //pack the jsonarray so that our httpclient supports it
-        packedJson.put(JSONFormat.VALUE,app.getIndex());
+        packedJson.put(JSONFormat.VALUE, app.getIndex());
         return packedJson.toJSONString();
     }
 
@@ -59,7 +59,7 @@ public class AppResource {
     @POST
     @Consumes("application/x-www-form-urlencoded")
     public void postTopicForm(@FormParam("title") String title, @FormParam("message") String message) {
-        app.postTopic(title,message);
+        app.postTopic(title, message);
     }
 
 
@@ -85,7 +85,12 @@ public class AppResource {
     @Consumes("application/x-www-form-urlencoded")
     public void replyToTopic(@PathParam("id") String id, @FormParam("message") String message) {
         long view = app.getView(id);
-        app.replyToTopic(id,message,view);
+        JSONObject messageObj = new JSONObject();
+        messageObj.put(JSONFormat.MESSAGE, message);
+        messageObj.put(JSONFormat.VIEW, view);
+        messageObj.put(JSONFormat.PUBLICKEY, app.getPublicKeyString());
+        messageObj.put(JSONFormat.SIGNATURE, app.signMessage(message, app.getTopic(id), view));
+        app.replyToTopic(id, messageObj);
     }
 
     //TODO TEST DIS
@@ -96,10 +101,8 @@ public class AppResource {
         System.out.println("received append reply request on id:" + id);
         JSONParser parser = new JSONParser();
         try {
-            JSONObject jRequest = (JSONObject) parser.parse(request);
-            String message = (String) jRequest.get(JSONFormat.MESSAGE);
-            long view = (long) jRequest.get(JSONFormat.VIEW);
-            app.replyToTopic(id,message,view);
+            JSONObject messageObj = (JSONObject) parser.parse(request);
+            app.replyToTopic(id, messageObj);
         } catch (ParseException e) {
             e.printStackTrace();
             return Response.status(400).build(); //Code 400: Bad Request due to malformed JSON

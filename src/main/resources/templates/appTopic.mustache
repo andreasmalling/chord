@@ -13,7 +13,10 @@
     </div>
     {{#replies}}
         <div style="background: lightgray; margin-top: 20px; padding: 10px;">
-            <span>({{timestamp}},{{timestampview}})</span>
+            <p style="font-size:12px">
+                ts: ({{timestamp}},{{timestampview}}) <br>
+                pk: {{publickey}} <br>
+                sig: {{signature}}</p>
             <p>{{message}}</p>
         </div>
     {{/replies}}
