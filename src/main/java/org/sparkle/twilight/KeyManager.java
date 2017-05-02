@@ -1,7 +1,11 @@
 package org.sparkle.twilight;
 
+import org.apache.commons.codec.binary.Base64;
+
 import javax.crypto.Cipher;
 import java.security.*;
+import java.security.spec.InvalidKeySpecException;
+import java.security.spec.X509EncodedKeySpec;
 
 public class KeyManager {
     private KeyPairGenerator gen;
@@ -82,6 +86,26 @@ public class KeyManager {
             e.printStackTrace();
         }
         return judgment;
+    }
+
+    public String encodePublicKey(PublicKey key) {
+        return Base64.encodeBase64String(key.getEncoded());
+    }
+
+    public PublicKey decodePublicKey(String string) {
+        PublicKey pubKey = null;
+        byte[] publicBytes = Base64.decodeBase64(string);
+        X509EncodedKeySpec keySpec = new X509EncodedKeySpec(publicBytes);
+        KeyFactory keyFactory = null;
+        try {
+            keyFactory = KeyFactory.getInstance(ALGORITHM);
+            pubKey = keyFactory.generatePublic(keySpec);
+        } catch (NoSuchAlgorithmException e) {
+            e.printStackTrace();
+        } catch (InvalidKeySpecException e) {
+            e.printStackTrace();
+        }
+        return pubKey;
     }
 
 }

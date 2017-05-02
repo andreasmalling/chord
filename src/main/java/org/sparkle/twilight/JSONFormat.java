@@ -18,4 +18,7 @@ public class JSONFormat {
     public static final String REPLIES = "replies";
     public static final String TIMESTAMP = "timestamp";
     public static final String VIEW = "timestampview";
+    public static final String PUBLICKEY = "publickey";
+    public static final String SIGNATURE = "signature";
+
 }

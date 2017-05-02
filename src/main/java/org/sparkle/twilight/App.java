@@ -1,17 +1,22 @@
 package org.sparkle.twilight;
 
 
+import org.apache.commons.codec.binary.Base64;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 
+import java.security.KeyPair;
+import java.security.PublicKey;
 import java.util.concurrent.ConcurrentHashMap;
 
 import static org.sparkle.twilight.Main.httpUtil;
 
 public class App {
 
-    private final ConcurrentHashMap<String, String> updateMap;
+    private ConcurrentHashMap<String, String> updateMap = null;
     private final ConcurrentHashMap<String, Long> timeStampViewMap;
+    private final KeyManager keyman;
+    private KeyPair keys;
     private Node node;
     private static final String INDEXKEY = "0";
     private static String NULLADDR = "";
@@ -19,8 +24,14 @@ public class App {
 
     public App(Node node) {
         this.node = node;
-        updateMap = node.getUpdateMap(); //K=id, V=address
+
+        //this is necessary for unit tests of app where node is null
+        if (node != null) {
+            updateMap = node.getUpdateMap(); //K=id, V=address
+        }
         timeStampViewMap = new ConcurrentHashMap<>();
+        keyman = new KeyManager(512);
+        keys = keyman.getKeys();
     }
 
     public JSONArray getIndex() {
@@ -41,7 +52,7 @@ public class App {
         //generate json for index
         JSONObject indexJson = new JSONObject();
         indexJson.put(JSONFormat.TITLE,title);
-        indexJson.put(JSONFormat.ID,messageId); //pretty sure we store this as int
+        indexJson.put(JSONFormat.ID, messageId);
         addNewTopicToIndex(indexJson);
 
         //generate json for topic
@@ -215,4 +226,64 @@ public class App {
         }
     }
 
+    //TODO test the stuff below...
+
+
+    //only used for debugging
+    public String getPublicKeyString() {
+        return keyman.encodePublicKey(keys.getPublic());
+    }
+
+    public String signMessage(String message, JSONObject topicView, long view) {
+        byte[] viewSig = getViewSig(topicView, view);
+        //System.out.println("signMessage: " + Base64.encodeBase64String(viewSig));
+        byte[] cryptoMessage = createCryptoMessage(viewSig, message, keys.getPublic());
+        System.out.println("sign crypto: " + new String(cryptoMessage));
+        byte[] sigBytes = keyman.sign(cryptoMessage, keys.getPrivate());
+        return Base64.encodeBase64String(sigBytes);
+    }
+
+    public String signOP(String title, String message) {
+        byte[] cryptoMessage = createCryptoMessageOp(title, message, keys.getPublic());
+        byte[] sigBytes = keyman.sign(cryptoMessage, keys.getPrivate());
+        return Base64.encodeBase64String(sigBytes);
+    }
+
+    public boolean validateReply(JSONObject reply, JSONObject topicView) {
+        long view = (long) reply.get(JSONFormat.VIEW);
+        byte[] viewSig = getViewSig(topicView, view);
+        //System.out.println("validate: " + Base64.encodeBase64String(viewSig));
+        String message = (String) reply.get(JSONFormat.MESSAGE);
+        PublicKey pKey = keyman.decodePublicKey((String) reply.get(JSONFormat.PUBLICKEY));
+        byte[] cryptoMessage = createCryptoMessage(viewSig, message, pKey);
+        System.out.println("veri crypto: " + new String(cryptoMessage));
+        byte[] signature = Base64.decodeBase64((String) reply.get(JSONFormat.SIGNATURE));
+
+        return keyman.verify(cryptoMessage, signature, pKey);
+    }
+
+    private byte[] createCryptoMessage(byte[] viewSig, String message, PublicKey pubkey) {
+        String cryptoMessage = Base64.encodeBase64String(viewSig) + message + keyman.encodePublicKey(pubkey);
+        return cryptoMessage.getBytes();
+    }
+
+    private byte[] createCryptoMessageOp(String title, String message, PublicKey pubkey) {
+        String cryptoMessage = title + message + keyman.encodePublicKey(pubkey);
+        return cryptoMessage.getBytes();
+    }
+
+    private byte[] getViewSig(JSONObject topic, long view) {
+        byte[] sig;
+        if (view == 0) {
+            //get sig of OP message
+            sig = Base64.decodeBase64((String) topic.get(JSONFormat.SIGNATURE));
+        } else {
+            int index = (int) (view - 1);
+            //get sig of reply with given view
+            JSONArray array = (JSONArray) topic.get(JSONFormat.REPLIES);
+            JSONObject latestReply = (JSONObject) array.get(index);
+            sig = Base64.decodeBase64((String) latestReply.get(JSONFormat.SIGNATURE));
+        }
+        return sig;
+    }
 }
