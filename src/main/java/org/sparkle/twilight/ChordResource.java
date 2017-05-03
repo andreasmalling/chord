@@ -10,10 +10,8 @@ import org.json.simple.parser.ParseException;
 import javax.ws.rs.*;
 import javax.ws.rs.core.Response;
 import java.net.URI;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 
 /**
  * Root resource
@@ -230,7 +228,7 @@ public class ChordResource {
             JSONObject jRequest = (JSONObject) parser.parse(json);
             JSONArray jsonArray = (JSONArray) jRequest.get(JSONFormat.DATA);
 
-            for (int i=0; i < jsonArray.size(); i++) {
+            for (int i = 0; i < jsonArray.size(); i++) {
                 JSONObject jsonObject = (JSONObject) jsonArray.get(i);
                 Object key = jsonObject.get(JSONFormat.KEY);
                 Object value = jsonObject.get(JSONFormat.VALUE);

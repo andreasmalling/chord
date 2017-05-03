@@ -26,12 +26,12 @@ public class SQLiteHandler extends Handler {
     public void publish(LogRecord record) {
         try {
             connection.createStatement().execute("INSERT INTO Logs (NODE ,CLASS, METHOD, TIME, MESSAGE, LEVEL) " +
-                    "VALUES ('"+Main.BASE_PORT
-                    +"','"+record.getSourceClassName()
-                    +"','"+record.getSourceMethodName()
-                    +"','"+record.getMillis()
-                    +"','"+record.getMessage()
-                    +"','"+record.getLevel().toString()+"');");
+                    "VALUES ('" + Main.BASE_PORT
+                    + "','" + record.getSourceClassName()
+                    + "','" + record.getSourceMethodName()
+                    + "','" + record.getMillis()
+                    + "','" + record.getMessage()
+                    + "','" + record.getLevel().toString() + "');");
         } catch (SQLException e) {
             e.printStackTrace();
         }

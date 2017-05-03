@@ -1,6 +1,5 @@
 package org.sparkle.twilight;
 
-import org.glassfish.hk2.api.Immediate;
 import org.glassfish.jersey.server.mvc.Template;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;

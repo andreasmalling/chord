@@ -15,7 +15,7 @@ public class LoggerUtil {
 
     public LoggerUtil(String BASE_PORT) {
         try {
-            fh = new FileHandler("./log/"+BASE_PORT+".log");
+            fh = new FileHandler("./log/" + BASE_PORT + ".log");
         } catch (IOException e) {
             e.printStackTrace();
         }

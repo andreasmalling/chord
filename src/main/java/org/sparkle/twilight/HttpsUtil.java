@@ -68,7 +68,7 @@ public class HttpsUtil {
             StringEntity params = new StringEntity(body.toJSONString());
             msgType.addHeader("content-type", JSONFormat.JSON);
             msgType.setEntity(params);
-            LOGGER.finer("Send " +msgType+ " message to " +url);
+            LOGGER.finer("Send " + msgType + " message to " + url);
             HttpResponse response = client.execute(msgType);
             if (response.getStatusLine().getStatusCode() != 200) {
                 LOGGER.warning("HTTP response is: " + response.getStatusLine().getStatusCode());
@@ -86,8 +86,9 @@ public class HttpsUtil {
 
     public JSONObject httpGetRequest(String url) throws NodeOfflineException {
         HttpGet getMsg = new HttpGet(url);
+        getMsg.addHeader("Accept", JSONFormat.JSON); //required if we want to do the M2M vs H2M rest stuff
         try {
-            LOGGER.finer("Send GET message to " +url);
+            LOGGER.finer("Send GET message to " + url);
             HttpResponse response = client.execute(getMsg);
             int sc = response.getStatusLine().getStatusCode();
             if (sc != 200) {

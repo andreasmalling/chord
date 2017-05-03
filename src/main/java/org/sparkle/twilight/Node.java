@@ -9,7 +9,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import static org.sparkle.twilight.Main.httpUtil;
@@ -388,20 +387,20 @@ public class Node {
     }
 
     public void addInstruction(Integer key, Instruction inst) {
-        instructionMap.put(key,inst);
+        instructionMap.put(key, inst);
     }
 
     public void executeInstruction(Instruction inst, String address) {
         String url = address + inst.getTarget();
         JSONObject body = inst.getBody();
         Instruction.Method method = inst.getMethod();
-        System.out.println("executing instruction:\nURL: "+ url + "\nmethod: " + method + "\nbody:\n" + body.toJSONString());
+        System.out.println("executing instruction:\nURL: " + url + "\nmethod: " + method + "\nbody:\n" + body.toJSONString());
         try {
             switch (method) {
                 case GET:
                     //not handled and doesn't make sense to do here because you cant get the response
                     //TODO hacky fix so that we can do async gets, Kresten plz fix
-                    updateMap.put((String) body.get(JSONFormat.ID),url); //store lookup id in the body ex: {id: 45}
+                    updateMap.put((String) body.get(JSONFormat.ID), url); //store lookup id in the body ex: {id: 45}
                     break;
                 case POST:
                     httpUtil.httpPostRequest(url, body);
@@ -437,7 +436,7 @@ public class Node {
 
         for (String succ : successorList) {
             try {
-                httpUtil.httpPostRequest(succ + ChordResource.DATABASE + "/" + key,jRequest);
+                httpUtil.httpPostRequest(succ + ChordResource.DATABASE + "/" + key, jRequest);
             } catch (NodeOfflineException e) {
                 e.printStackTrace();
             }

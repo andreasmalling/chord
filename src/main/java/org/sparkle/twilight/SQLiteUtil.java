@@ -1,4 +1,5 @@
 package org.sparkle.twilight;
+
 import org.sqlite.*;
 
 import java.sql.Connection;
@@ -18,13 +19,13 @@ public class SQLiteUtil {
     public SQLiteUtil(String logname) {
         try {
             Class.forName("org.sqlite.JDBC");
-            boolean initialize = SQLiteJDBCLoader.initialize();
+            SQLiteJDBCLoader.initialize();
             SQLiteDataSource ds = new SQLiteDataSource();
             ds.setUrl("jdbc:sqlite:./log/" + logname + ".db");
             Connection conn = ds.getConnection();
             Statement st = conn.createStatement();
             st.execute("CREATE TABLE IF NOT EXISTS Logs (ID INTEGER PRIMARY KEY ASC, NODE INTEGER, CLASS CHAR , METHOD CHAR, " +
-                           "TIME DATE, MESSAGE CHAR, LEVEL CHAR);");
+                            "TIME DATE, MESSAGE CHAR, LEVEL CHAR);");
             st.close();
             connection = conn;
             dataSource = ds;

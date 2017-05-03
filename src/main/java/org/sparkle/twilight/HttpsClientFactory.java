@@ -9,6 +9,7 @@ import org.apache.http.conn.ssl.SSLContexts;
 
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -48,7 +49,7 @@ public class HttpsClientFactory {
         sslCon.setKeyStoreFile("keystore.jceks"); // contains server keypair
         sslCon.setKeyPass(pass);
         return sslCon.createSSLContext();*/
-        KeyStore trustStore  = KeyStore.getInstance("jceks");
+        KeyStore trustStore = KeyStore.getInstance("jceks");
         FileInputStream instream = new FileInputStream(new File("keystore.jceks"));
         try {
             trustStore.load(instream, pass);

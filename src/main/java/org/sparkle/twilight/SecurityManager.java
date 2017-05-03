@@ -41,18 +41,18 @@ public class SecurityManager {
         this.keyStore = keyStore;
     }
 
-    public SecurityManager(String basePort){
-        KEYSTORE = "keystore-" + basePort + "." +TYPE;
-        try{
+    public SecurityManager(String basePort) {
+        KEYSTORE = "keystores/" + basePort + "." + TYPE;
+        try {
             keyGen = new CertAndKeyGen("RSA", "SHA256WithRSA", null);
             keyGen.generate(2048);
             cert = keyGen.getSelfCertificate(new X500Name("CN=localhost"), 365 * 24 * 3600);
             keyStore = KeyStore.getInstance(TYPE);
             keyStore.load(null, PASSWORD);
             Certificate[] certArray = {cert};
-            System.out.println(keyGen.getPrivateKey().getFormat()+ " @@ "+ keyGen.getPrivateKey().getClass());
-            keyStore.setKeyEntry("PKCS", keyGen.getPrivateKey(), PASSWORD,certArray);
-            keyStore.setCertificateEntry("cert",cert);
+            System.out.println(keyGen.getPrivateKey().getFormat() + " @@ " + keyGen.getPrivateKey().getClass());
+            keyStore.setKeyEntry("PKCS", keyGen.getPrivateKey(), PASSWORD, certArray);
+            keyStore.setCertificateEntry("cert", cert);
             keyStore.store(new FileOutputStream(KEYSTORE), PASSWORD);
         } catch (NoSuchAlgorithmException e) {
             e.printStackTrace();

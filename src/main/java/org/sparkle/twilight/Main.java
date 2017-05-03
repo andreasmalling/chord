@@ -1,6 +1,5 @@
 package org.sparkle.twilight;
 
-import org.apache.http.client.HttpClient;
 import org.glassfish.grizzly.http.server.HttpServer;
 import org.glassfish.grizzly.ssl.SSLContextConfigurator;
 import org.glassfish.grizzly.ssl.SSLEngineConfigurator;
@@ -10,13 +9,10 @@ import org.glassfish.jersey.server.mvc.mustache.MustacheMvcFeature;
 
 import java.io.IOException;
 import java.net.URI;
-import java.util.logging.FileHandler;
 import java.util.logging.Logger;
-import java.util.logging.SimpleFormatter;
 
 /**
  * Main class.
- *
  */
 public class Main {
     private static SecurityManager SM = null;
@@ -31,6 +27,7 @@ public class Main {
 
     /**
      * Starts Grizzly HTTP server exposing JAX-RS resources defined in this application.
+     *
      * @return Grizzly HTTP server.
      */
     public static HttpServer startServer() {
@@ -46,7 +43,7 @@ public class Main {
         return GrizzlyHttpServerFactory.createHttpServer(URI.create(BASE_URI), rc);
     }
 
-    public static HttpServer startSecureServer(){
+    public static HttpServer startSecureServer() {
         SM = new SecurityManager(BASE_PORT);
         final ResourceConfig rc = new ResourceConfig().property(
                 MustacheMvcFeature.TEMPLATE_BASE_PATH, "templates")
@@ -62,10 +59,11 @@ public class Main {
                 , true, new SSLEngineConfigurator(sslCon, false, false, true));
 
         return server;
-        }
+    }
 
     /**
      * Main method.
+     *
      * @param args
      * @throws IOException
      */
@@ -74,13 +72,13 @@ public class Main {
             //Create chord ring at args 0
             BASE_PORT = args[0];
             BASE_URI = "https://localhost:" + BASE_PORT + "/";
-        } else if (args.length == 2){
+        } else if (args.length == 2) {
             //Join chord ring at args 1
             BASE_PORT = args[0];
             BASE_URI = "https://localhost:" + BASE_PORT + "/";
             ENTRY_POINT = "https://localhost:" + args[1] + "/";
         } else {
-            BASE_PORT = args[0];
+            BASE_PORT = "8080";
             //Create chord ring at port 8080
             BASE_URI = "https://localhost:" + BASE_PORT + "/";
         }
@@ -89,10 +87,10 @@ public class Main {
 
         httpUtil = new HttpsUtil();
         server = startSecureServer();
-        LOGGER.info("Server started at "+BASE_URI);
+        LOGGER.info("Server started at " + BASE_URI);
         System.out.println(String.format("Jersey app started with WADL available at "
                 + "%sapplication.wadl\nHit enter to stop it...", BASE_URI));
-        for (String s: args)
+        for (String s : args)
             System.out.println(s);
         System.in.read();
         server.shutdownNow();
