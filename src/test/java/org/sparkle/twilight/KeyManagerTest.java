@@ -3,13 +3,11 @@ package org.sparkle.twilight;
 
 import org.junit.Before;
 import org.junit.Test;
-import sun.misc.BASE64Encoder;
 
 import java.security.KeyPair;
+import java.security.PublicKey;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 /**
  * Created by kgoyo on 10-04-2017.
@@ -41,6 +39,14 @@ public class KeyManagerTest {
         boolean b = man.verify(message.getBytes(), signature,pair.getPublic());
 
         assertTrue("should verify to true", b);
+    }
+
+    @Test
+    public void encodeDecodePkey() {
+        PublicKey pkey = pair.getPublic();
+        String pkeyString = man.encodePublicKey(pkey);
+        PublicKey pkey2 = man.decodePublicKey(pkeyString);
+        assertEquals("keys should be the same", pkey, pkey2);
     }
 
 }

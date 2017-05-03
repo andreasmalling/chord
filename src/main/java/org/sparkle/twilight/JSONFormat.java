@@ -12,7 +12,13 @@ public class JSONFormat {
     public static final String HOPS = "hops";
     public static final String SHOWINCONSOLE = "show";
     public static final String DATA = "data";
-    public static final String HASDATA = "has_data";
+    public static final String TITLE = "title";
     public static final String ID = "id";
-    public static final String ACCESSTOKEN = "token";
+    public static final String MESSAGE = "message";
+    public static final String REPLIES = "replies";
+    public static final String TIMESTAMP = "timestamp";
+    public static final String VIEW = "timestampview";
+    public static final String PUBLICKEY = "publickey";
+    public static final String SIGNATURE = "signature";
+
 }

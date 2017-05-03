@@ -2,6 +2,7 @@ package org.sparkle.twilight;
 
 import org.apache.commons.codec.digest.DigestUtils;
 import org.json.simple.JSONArray;
+import org.json.simple.JSONAware;
 import org.json.simple.JSONObject;
 
 import java.util.ArrayList;
@@ -25,12 +26,12 @@ public class Node {
     private int predecessorId;
     private List<String> addresses;
     private List<Finger> fingerTable;
-    private DataSource dataSource;
 
     private ConcurrentHashMap<Integer, Instruction> instructionMap;
+    private ConcurrentHashMap<String, String> updateMap;
     private final int successorListLength = 5;
+
     private ChordStorage storage;
-    private Thread dataUpdateThread;
 
     private static final Logger LOGGER = Logger.getLogger(Node.class.getName());
 
@@ -65,11 +66,12 @@ public class Node {
         fingerTable = new CopyOnWriteArrayList<>();
         instructionMap = new ConcurrentHashMap<>();
         storage = new ChordStorage(String.valueOf(id));
+        updateMap = new ConcurrentHashMap<>();
 
         upsertFingerTable(true);
     }
 
-    private int generateHash(String address) {
+    public int generateHash(String address) {
         return Integer.decode("0x" + DigestUtils.sha1Hex(address).substring(0, hashTruncation));
     }
 
@@ -104,43 +106,26 @@ public class Node {
         this.predecessorId = generateHash(predecessor);
         this.predecessor = predecessor;
 
-        // If we own a datasource, the predecessor (if responsible) should own source
+        if (predecessorId == id) {
+            return;
+        }
+
+        JSONArray topicsToPred = new JSONArray();
+
+        storage.dumpKeySet().stream().filter(key -> !isMyKey(Integer.parseInt(key.toString()))).forEach(key -> {
+            packTopicsAsJSON(topicsToPred, key);
+        });
+
         try {
-            String dataSourceID = storage.getValue(ChordStorage.ID_KEY);
-            String dataSourceToken = storage.getValue(ChordStorage.TOKEN_KEY);
-
-            if (dataSource != null) {
-                if (predecessorId > generateHash(dataSourceID)) {
-                    JSONObject json = new JSONObject();
-                    json.put(JSONFormat.ID, dataSourceID);
-                    json.put(JSONFormat.ACCESSTOKEN, dataSourceToken);
-                    try {
-                        ArrayList<String> urllist = new ArrayList<>();
-                        urllist.add(0, this.predecessor);
-                        JSONArray jsonArray = new JSONArray();
-                        jsonArray.addAll(storage.getDataList());
-                        String data = jsonArray.toJSONString();
-                        pushDataToNodes(urllist, data);
-                        httpUtil.httpPutRequest(predecessor + "/" + ChordResource.RESOURCEPATH, json);
-                        dataUpdateThread.interrupt();
-                    } catch (NodeOfflineException e) {
-                        //TODO if node is offline try next successor
-                        LOGGER.severe("Node is offline: " + e.getMessage());
-                    }
-                }
-            }
-
-            // Should we take responsiblity for resource, due to improper leave?
-            if (isMyKey(generateHash(dataSourceID))) {
-                if (dataSource == null) {
-                    System.out.println("Take on responsibility of resource");
-                    initDataSource(dataSourceID, dataSourceToken);
-                }
-            }
-        } catch (NoValueException e) {
-            LOGGER.warning("DataSource have ´No Value´");
+            JSONObject json = new JSONObject();
+            json.put(JSONFormat.DATA, topicsToPred);
+            httpUtil.httpPostRequest(predecessor + ChordResource.DATABASE, json);
+        } catch (NodeOfflineException e) {
+            LOGGER.severe("Node is offline: " + e.getMessage());
+            e.printStackTrace();
         }
     }
+
 
     public void joinRing(String address) {
         setSuccessor(address);
@@ -219,37 +204,44 @@ public class Node {
                 }
             }
         }
-
-        if (updated && dataSource != null) {
-            try {
-                pushResourceToSuccessors(storage.getValue(ChordStorage.ID_KEY), storage.getValue(ChordStorage.TOKEN_KEY));
-            } catch (NoValueException e) {
-                LOGGER.warning("DataSource have 'No Value'");
+        //TODO - should replicate responsible topics to successors
+        if (updated) {
+            JSONArray topicsToSuccs = new JSONArray();
+            storage.dumpKeySet().stream().filter(key -> isMyKey((int) key)).forEach(key -> {
+                packTopicsAsJSON(topicsToSuccs, key);
+            });
+            for (String succAddress : successorList) {
+                String url = succAddress + ChordResource.DATABASE;
+                JSONObject json = new JSONObject();
+                json.put(JSONFormat.DATA, topicsToSuccs);
+                try {
+                    httpUtil.httpPostRequest(url, json);
+                } catch (NodeOfflineException e) {
+                    System.out.println("Tried to push data to " + url + ", but failed.");
+                    upsertSuccessorList();
+                }
             }
         }
-        updated = false;
-
         String freshSucc = tempSuccList.get(0);
         if (!getSuccessor().equals(freshSucc)) {
             //update succ.pred
             updateNeighbor(JSONFormat.PREDECESSOR, this.address, freshSucc + ChordResource.PREDECESSORPATH);
         }
-
+        //set new succlist
         if (!successorList.equals(tempSuccList)) {
-            // Create new list with updated successors
-            ArrayList<String> broadcastDataSetList = new ArrayList<>(tempSuccList);
-            broadcastDataSetList.removeAll(successorList);
-
-            JSONArray jsonArray = new JSONArray();
-            jsonArray.addAll(storage.getDataList());
-            String data = jsonArray.toJSONString();
-            pushDataToNodes(broadcastDataSetList, data);
-
-            // Set new successorlist
             successorList = tempSuccList;
         }
     }
 
+    private void packTopicsAsJSON(JSONArray topicsToSend, Object key) {
+        JSONAware topic = (JSONAware) storage.getObject(key);
+        JSONObject jsonObject = new JSONObject();
+        jsonObject.put(JSONFormat.KEY, key);
+        jsonObject.put(JSONFormat.VALUE, topic);
+        topicsToSend.add(jsonObject);
+    }
+
+    //TODO - could probably be smarter than linear
     private void upsertFingerTable(boolean first) {
         LOGGER.info("Upserting Fingertable");
         int fingerTableSize = (int) (Math.log(IDSPACE) / Math.log(2));
@@ -293,24 +285,7 @@ public class Node {
         // Find predecessor and set its Successor to this node's Successor
         updateNeighbor(JSONFormat.SUCCESSOR, getSuccessor(), getPredecessor() + ChordResource.SUCCESSORPATH);
         // and set pred of succ to this node's pred
-        updateNeighbor(JSONFormat.PREDECESSOR, getPredecessor(), getSuccessor() + ChordResource.PREDECESSORPATH);
-        //pass on the resource responsibillity
-        if (dataSource != null) {
-            JSONObject json = new JSONObject();
-            try {
-                json.put(JSONFormat.ID, storage.getValue(ChordStorage.ID_KEY));
-                json.put(JSONFormat.ACCESSTOKEN, storage.getValue(ChordStorage.TOKEN_KEY));
-                httpUtil.httpPutRequest(successorList.get(0) + "/" + ChordResource.RESOURCEPATH, json);
-            } catch (NodeOfflineException e) {
-                //TODO if node is offline try next successor
-                LOGGER.severe("Node Offline: " + e.getMessage());
-            } catch (NoValueException e) {
-                // Should never happen
-                LOGGER.severe("Data Source 'No Value'" + e.getMessage());
-            }
-        }
         storage.shutdown();
-        dataUpdateThread.interrupt();
         Main.server.shutdownNow();
         System.exit(0);
     }
@@ -353,12 +328,11 @@ public class Node {
                     LOGGER.info("Fingertable node lookup on " + lookupFinger.getAddress() + " failed. initiator: " + initiator + " currentSender: " + address);
                     upsertFingerTable(false);
                 }
-
             }
         }
     }
 
-    private boolean isMyKey(int key) {
+    public boolean isMyKey(int key) {
         if (predecessorId == id) {
             //only one in chord
             return true;
@@ -409,120 +383,25 @@ public class Node {
         return fingerTable;
     }
 
-    public DataSource getDataSource() {
-        return dataSource;
-    }
-
     public ConcurrentHashMap<Integer, Instruction> getInstructionMap() {
         return instructionMap;
     }
 
-    public void handlePutResource(JSONObject json) {
-        if (dataSource == null) {
-            String id = json.get(JSONFormat.ID).toString();
-            int key = generateHash(id);
-            if (isMyKey(key)) {
-                String accesstoken = json.get(JSONFormat.ACCESSTOKEN).toString();
-                initDataSource(id, accesstoken);
-            } else {
-                //create instruction to be executed later when we receive the response on /receive
-                Instruction inst = new Instruction(Instruction.Method.PUT, json, ChordResource.RESOURCEPATH);
-                instructionMap.put(key, inst);
-                lookup(key, this.address, new JSONProperties("finger", 0, false)); //should never return query response
-            }
-        }
-    }
-
-    private void initDataSource(String id, String accesstoken) {
-        dataSource = new DataSource(id, accesstoken);
-        upsertDatabase(ChordStorage.ID_KEY, id, false);
-        upsertDatabase(ChordStorage.TOKEN_KEY, accesstoken, true);
-        pushResourceToSuccessors(id, accesstoken);
-        Runnable dataUpdateThread = () -> startDataSourceUpdateLoop();
-        this.dataUpdateThread = new Thread(dataUpdateThread);
-        this.dataUpdateThread.start();
-    }
-
-    private void startDataSourceUpdateLoop() {
-        while (!Thread.interrupted()) {
-            try {
-                if (dataSource != null) {
-                    dataSource.updateData();
-                    String data = dataSource.getData();
-                    storage.putData(data);
-                    pushDataToNodes(successorList, data);
-                    int sleepTime = 2000;
-                    double random = Math.random() * sleepTime;
-                    System.out.println("Data was updated with new value: " + data + ". Now I sleep for " + (sleepTime + random) / 1000 + " seconds. Zzz...");
-                    Thread.sleep((long) (sleepTime + random));
-                } else {
-                    return;
-                }
-            } catch (InterruptedException e) {
-                dataSource = null;
-            } catch (NodeOfflineException e) {
-                dataSource.setData(DataSource.DATA_NOT_AVAILABLE);
-            }
-        }
-        dataSource = null;
-    }
-
-    private void pushResourceToSuccessors(String id, String token) {
-        for (String succAddress : successorList) {
-            String url = succAddress + ChordResource.DATABASE + "/id";
-            JSONObject bodyID = new JSONObject();
-            bodyID.put(JSONFormat.VALUE, id);
-
-            String urlToken = succAddress + ChordResource.DATABASE + "/token";
-            JSONObject bodyToken = new JSONObject();
-            bodyToken.put(JSONFormat.VALUE, token);
-            try {
-                httpUtil.httpPostRequest(url, bodyID);
-                httpUtil.httpPostRequest(urlToken, bodyToken);
-            } catch (NodeOfflineException e) {
-                System.out.println("Tried to push data to " + url + ", but failed.");
-                upsertSuccessorList();
-            }
-        }
-    }
-
-    private void pushDataToNodes(List<String> successorList, String data) {
-        for (String succAddress : successorList) {
-            if (succAddress.equals(address)) {
-                break;
-            }
-            String url = succAddress + ChordResource.DATABASE + "/data";
-            JSONObject body = new JSONObject();
-            body.put(JSONFormat.VALUE, data);
-            try {
-                httpUtil.httpPostRequest(url, body);
-            } catch (NodeOfflineException e) {
-                System.out.println("Tried to push data to " + url + ", but failed.");
-            }
-        }
-    }
-
-
-    public void upsertDatabase(String type, String value, boolean commit) {
-        storage.putValue(type, value, commit);
-    }
-
-    public void overwriteData(ArrayList<String> value) {
-        storage.putData(value);
-    }
-
-    public String getData() {
-        return storage.getData();
+    public void addInstruction(Integer key, Instruction inst) {
+        instructionMap.put(key,inst);
     }
 
     public void executeInstruction(Instruction inst, String address) {
         String url = address + inst.getTarget();
         JSONObject body = inst.getBody();
         Instruction.Method method = inst.getMethod();
+        System.out.println("executing instruction:\nURL: "+ url + "\nmethod: " + method + "\nbody:\n" + body.toJSONString());
         try {
             switch (method) {
                 case GET:
                     //not handled and doesn't make sense to do here because you cant get the response
+                    //TODO hacky fix so that we can do async gets, Kresten plz fix
+                    updateMap.put((String) body.get(JSONFormat.ID),url); //store lookup id in the body ex: {id: 45}
                     break;
                 case POST:
                     httpUtil.httpPostRequest(url, body);
@@ -542,5 +421,31 @@ public class Node {
     public String getDatabaseAsString() {
         return storage.toString();
     }
-}
 
+    public ChordStorage getStorage() {
+        return storage;
+    }
+
+    public void putObjectInStorage(Object key, Object value) {
+        storage.putObject(key, value);
+    }
+
+    public void replicateData(String key, JSONObject jRequest) {
+        if (!isMyKey(Integer.parseInt(key))) {
+            return;
+        }
+
+        for (String succ : successorList) {
+            try {
+                httpUtil.httpPostRequest(succ + ChordResource.DATABASE + "/" + key,jRequest);
+            } catch (NodeOfflineException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    public ConcurrentHashMap<String, String> getUpdateMap() {
+        return updateMap;
+    }
+
+}

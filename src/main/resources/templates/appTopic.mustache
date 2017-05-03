@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Bismuth</title>
+</head>
+<body>
+<div style="width: 50%; margin: auto;">
+    <div>
+        <h1>{{title}}</h1>
+        <span>{{timestamp}}</span>
+        <p>{{message}}</p>
+    </div>
+    {{#replies}}
+        <div style="background: lightgray; margin-top: 20px; padding: 10px;">
+            <p style="font-size:12px">
+                ts: ({{timestamp}},{{timestampview}}) <br>
+                pk: {{publickey}} <br>
+                sig: {{signature}}</p>
+            <p>{{message}}</p>
+        </div>
+    {{/replies}}
+    <div>
+        <div style="text-align: right; margin-top: 20px;">
+            <iframe width="0" height="0" border="0" name="nothing" style="display: none"></iframe>
+            <textarea name="message" form="reply" placeholder="Enter reply here"
+                      style="resize: none; width: 100%; height: 200px"></textarea>
+            <form action="/app/{{id}}/reply" method="post" target="nothing" id="reply">
+                <input type="submit" value="Reply to topic">
+            </form>
+        </div>
+    </div>
+</div>
+</body>

@@ -13,4 +13,10 @@ public class JSONProperties {
         this.hops = hops;
         this.showInConsole = showInConsole;
     }
+
+    public JSONProperties() {
+        method = "finger";
+        hops = 0;
+        showInConsole = false;
+    }
 }
