@@ -4,6 +4,7 @@ package org.sparkle.twilight;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.nio.charset.StandardCharsets;
 import java.security.KeyPair;
 import java.security.PublicKey;
 
@@ -26,17 +27,17 @@ public class KeyManagerTest {
 
     @Test
     public void testEncryptDecrypt() {
-        byte[] cipherText = man.encrypt(message.getBytes(),pair.getPublic());
+        byte[] cipherText = man.encrypt(message.getBytes(StandardCharsets.UTF_8),pair.getPublic());
         byte[] clearText = man.decrypt(cipherText,pair.getPrivate());
 
         assertEquals("decryted message should be the same as original",message, new String(clearText));
-        assertNotEquals("message must not be the same as encrypted message",cipherText, message.getBytes());
+        assertNotEquals("message must not be the same as encrypted message",cipherText, message.getBytes(StandardCharsets.UTF_8));
     }
 
     @Test
     public void testSignVerify() {
-        byte[] signature = man.sign(message.getBytes(),pair.getPrivate());
-        boolean b = man.verify(message.getBytes(), signature,pair.getPublic());
+        byte[] signature = man.sign(message.getBytes(StandardCharsets.UTF_8),pair.getPrivate());
+        boolean b = man.verify(message.getBytes(StandardCharsets.UTF_8), signature,pair.getPublic());
 
         assertTrue("should verify to true", b);
     }

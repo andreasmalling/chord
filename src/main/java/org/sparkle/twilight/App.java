@@ -5,6 +5,7 @@ import org.apache.commons.codec.binary.Base64;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 
+import java.nio.charset.StandardCharsets;
 import java.security.KeyPair;
 import java.security.PublicKey;
 import java.util.concurrent.ConcurrentHashMap;
@@ -266,12 +267,12 @@ public class App {
 
     private byte[] createCryptoMessage(byte[] viewSig, String message, PublicKey pubkey) {
         String cryptoMessage = Base64.encodeBase64String(viewSig) + message + keyman.encodePublicKey(pubkey);
-        return cryptoMessage.getBytes();
+        return cryptoMessage.getBytes(StandardCharsets.UTF_8);
     }
 
     private byte[] createCryptoMessageOp(String title, String message, PublicKey pubkey) {
         String cryptoMessage = title + message + keyman.encodePublicKey(pubkey);
-        return cryptoMessage.getBytes();
+        return cryptoMessage.getBytes(StandardCharsets.UTF_8);
     }
 
     private byte[] getViewSig(JSONObject topic, long view) {

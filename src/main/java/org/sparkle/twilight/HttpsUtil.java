@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
 import java.net.SocketTimeoutException;
+import java.nio.charset.StandardCharsets;
 import java.security.KeyManagementException;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
@@ -65,7 +66,7 @@ public class HttpsUtil {
 
     private void createAndExecuteRequest(String url, JSONObject body, HttpEntityEnclosingRequestBase msgType) throws NodeOfflineException {
         try {
-            StringEntity params = new StringEntity(body.toJSONString());
+            StringEntity params = new StringEntity(body.toJSONString(), StandardCharsets.UTF_8);
             msgType.addHeader("content-type", JSONFormat.JSON);
             msgType.setEntity(params);
             LOGGER.finer("Send " + msgType + " message to " + url);
@@ -96,7 +97,7 @@ public class HttpsUtil {
             }
             BufferedReader reader = new BufferedReader(
                     new InputStreamReader(
-                            response.getEntity().getContent()));
+                            response.getEntity().getContent(), StandardCharsets.UTF_8));
             String jsonstring = "";
             String line;
             while ((line = reader.readLine()) != null) {

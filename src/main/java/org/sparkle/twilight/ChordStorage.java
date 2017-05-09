@@ -8,11 +8,13 @@ import org.mapdb.DBMaker;
 import java.io.File;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
+import java.util.logging.Logger;
 
 public class ChordStorage {
 
     private DB db;
     private ConcurrentMap map;
+    private static final Logger LOGGER = Logger.getLogger(ChordStorage.class.getName());
 
     public ChordStorage(String node_id) {
         File file = new File("db/" + node_id);
@@ -49,6 +51,7 @@ public class ChordStorage {
     public void putObject(Object key, Object value) {
         map.put(key, value);
         db.commit();
+        LOGGER.info("Commited object " + value + " to key " + key);
     }
 
     public void shutdown() {
