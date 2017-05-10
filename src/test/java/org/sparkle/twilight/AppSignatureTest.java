@@ -91,4 +91,16 @@ public class AppSignatureTest {
         assertTrue("The first reply should be valid", opApp.validateReply(reply1, testTopic));
         assertTrue("The second reply should be valid", opApp.validateReply(reply2, testTopic));
     }
+
+    @Test
+    public void shouldNotbeBeAbleToTamber1() {
+        reply1.put(JSONFormat.MESSAGE, "tampered message");
+        assertFalse("The reply should not be valid", opApp.validateReply(reply1, testTopic));
+    }
+
+    @Test
+    public void shouldNotbeBeAbleToTamber2() {
+        reply2.put(JSONFormat.MESSAGE, "tampered message");
+        assertFalse("The reply should not be valid", opApp.validateReply(reply2, testTopic));
+    }
 }
