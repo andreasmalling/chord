@@ -24,7 +24,6 @@ public class AppResource {
     @GET
     @Produces("text/html")
     public IndexContext getIndexHtml() {
-        System.out.println("\033[32mHTML\033[0m");
         app.updateIndex();
         JSONArray index = app.getIndex();
         return new IndexContext(index);
@@ -33,7 +32,6 @@ public class AppResource {
     @GET
     @Produces(JSONFormat.JSON)
     public String getIndexJson() {
-        System.out.println("\033[32mJSON\033[0m");
         JSONObject packedJson = new JSONObject(); //pack the jsonarray so that our httpclient supports it
         packedJson.put(JSONFormat.VALUE, app.getIndex());
         return packedJson.toJSONString();
@@ -42,7 +40,6 @@ public class AppResource {
     @POST
     @Consumes(JSONFormat.JSON)
     public Response appendToIndex(String request) {
-        System.out.println("received appendToIndex request");
         JSONParser parser = new JSONParser();
         try {
             JSONObject jRequest = (JSONObject) parser.parse(request);
@@ -92,12 +89,10 @@ public class AppResource {
         app.replyToTopic(id, messageObj);
     }
 
-    //TODO TEST DIS
     @Path("{id}/reply")
     @POST
     @Consumes(JSONFormat.JSON)
     public Response postTopicReply(String request, @PathParam("id") String id) {
-        System.out.println("received append reply request on id:" + id);
         JSONParser parser = new JSONParser();
         try {
             JSONObject messageObj = (JSONObject) parser.parse(request);
