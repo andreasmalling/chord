@@ -4,6 +4,7 @@ import org.sqlite.SQLiteDataSource;
 
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.util.logging.Handler;
 import java.util.logging.LogRecord;
 
@@ -29,7 +30,7 @@ public class SQLiteHandler extends Handler {
                     "VALUES ('" + Main.BASE_PORT
                     + "','" + record.getSourceClassName()
                     + "','" + record.getSourceMethodName()
-                    + "','" + record.getMillis()
+                    + "','" + new Timestamp(record.getMillis())
                     + "','" + record.getMessage()
                     + "','" + record.getLevel().toString() + "');");
         } catch (SQLException e) {

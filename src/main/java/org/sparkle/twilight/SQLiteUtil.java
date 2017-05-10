@@ -1,11 +1,11 @@
 package org.sparkle.twilight;
 
-import org.sqlite.*;
+import org.sqlite.SQLiteDataSource;
+import org.sqlite.SQLiteJDBCLoader;
 
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.logging.ConsoleHandler;
 
 /**
  * Created by Root on 27/4/2017.
@@ -25,7 +25,7 @@ public class SQLiteUtil {
             Connection conn = ds.getConnection();
             Statement st = conn.createStatement();
             st.execute("CREATE TABLE IF NOT EXISTS Logs (ID INTEGER PRIMARY KEY ASC, NODE INTEGER, CLASS CHAR , METHOD CHAR, " +
-                            "TIME DATE, MESSAGE CHAR, LEVEL CHAR);");
+                    "TIME TEXT, MESSAGE CHAR, LEVEL CHAR);");
             st.close();
             connection = conn;
             dataSource = ds;
