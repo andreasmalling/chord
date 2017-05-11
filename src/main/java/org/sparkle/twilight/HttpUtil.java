@@ -21,15 +21,17 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
 import java.net.SocketTimeoutException;
+import java.nio.charset.StandardCharsets;
+import java.util.logging.Logger;
 
-/**
- * Created by Kresten on 21-02-2017.
- */
 public class HttpUtil {
-    private HttpClient client;
+    protected HttpClient client;
     private final int connectionTimeout = 3000;
+    protected static Logger LOGGER;
 
     public HttpUtil() {
+        LOGGER = Logger.getLogger(HttpUtil.class.getName());
+        LoggerHandlers.addHandlers(LOGGER);
         HttpClientBuilder builder = HttpClientBuilder.create();
         RequestConfig config = RequestConfig.custom().setConnectTimeout(connectionTimeout).setSocketTimeout(connectionTimeout).build();
         builder.setDefaultRequestConfig(config);
@@ -48,13 +50,15 @@ public class HttpUtil {
 
     private void createAndExecuteRequest(String url, JSONObject body, HttpEntityEnclosingRequestBase msgType) throws NodeOfflineException {
         try {
-            StringEntity params = new StringEntity(body.toJSONString());
+            StringEntity params = new StringEntity(body.toJSONString(), StandardCharsets.UTF_8);
             msgType.addHeader("content-type", JSONFormat.JSON);
             msgType.setEntity(params);
+            LOGGER.finer("Send " + msgType + " message to " + url);
+            long start = System.currentTimeMillis();
             HttpResponse response = client.execute(msgType);
+            LOGGER.info("Time to get response: " + (System.currentTimeMillis() - start));
             if (response.getStatusLine().getStatusCode() != 200) {
-                System.out.println(response.getStatusLine().getStatusCode());
-                System.out.println("ERROR ERROR " + url);
+                LOGGER.warning("HTTP response is: " + response.getStatusLine().getStatusCode());
             }
         } catch (HttpHostConnectException | ConnectTimeoutException | SocketTimeoutException e) {
             throw new NodeOfflineException();
@@ -71,13 +75,17 @@ public class HttpUtil {
         HttpGet getMsg = new HttpGet(url);
         getMsg.addHeader("Accept", JSONFormat.JSON); //required if we want to do the M2M vs H2M rest stuff
         try {
+            LOGGER.finer("Send GET message to " + url);
+            long start = System.currentTimeMillis();
             HttpResponse response = client.execute(getMsg);
-            if (response.getStatusLine().getStatusCode() != 200) {
-                System.out.println("ERROR ERROR: Could not get");
+            LOGGER.info("Time to get response: " + (System.currentTimeMillis() - start));
+            int sc = response.getStatusLine().getStatusCode();
+            if (sc != 200) {
+                LOGGER.severe("Get request failed with status code " + sc);
             }
             BufferedReader reader = new BufferedReader(
                     new InputStreamReader(
-                            response.getEntity().getContent()));
+                            response.getEntity().getContent(), StandardCharsets.UTF_8));
             String jsonstring = "";
             String line;
             while ((line = reader.readLine()) != null) {
@@ -93,6 +101,7 @@ public class HttpUtil {
         } catch (ParseException e) {
             e.printStackTrace();
         }
-        return null; //TODO fix mabye?
+        LOGGER.severe("TODO fix mabye?");
+        return null;
     }
 }

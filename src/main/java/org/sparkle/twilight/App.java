@@ -225,7 +225,7 @@ public class App {
             if (!updateMap.get(key).equals(NULLADDR)) {
                 break;
             }
-            LOGGER.warning("failed to update index on try number: " + i + 1);
+            LOGGER.warning("failed to update index on try number: " + (i + 1));
         }
     }
     public String getPublicKeyString() {

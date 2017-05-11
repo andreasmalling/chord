@@ -167,7 +167,7 @@ public class Node {
     }
 
     private void upsertSuccessorList() {
-        LOGGER.info("Upserting Successor List");
+        LOGGER.fine("Upserting Successor List");
         //Sorry
         //Add successors successorlist as this node's (after the first successor)
 
@@ -242,7 +242,7 @@ public class Node {
 
     //TODO - could probably be smarter than linear
     private void upsertFingerTable(boolean first) {
-        LOGGER.info("Upserting Fingertable");
+        LOGGER.fine("Upserting Fingertable");
         int fingerTableSize = (int) (Math.log(IDSPACE) / Math.log(2));
         for (int i = 0; i < fingerTableSize; i++) {
             int lookupID = (id + (int) (Math.pow(2, i))) % IDSPACE;
