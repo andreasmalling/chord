@@ -93,6 +93,15 @@ public class AppSignatureTest {
     }
 
     @Test
+    public void validateReplyToOpMeasurement() {
+       Long b = System.currentTimeMillis();
+        for(int i = 0; i < 500; i++){
+        opApp.validateReply(reply1, testTopic);
+       }
+        System.out.println((double) (System.currentTimeMillis()-b)/500);
+    }
+
+    @Test
     public void shouldNotbeBeAbleToTamber1() {
         reply1.put(JSONFormat.MESSAGE, "tampered message");
         assertFalse("The reply should not be valid", opApp.validateReply(reply1, testTopic));

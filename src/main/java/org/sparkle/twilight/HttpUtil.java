@@ -56,7 +56,7 @@ public class HttpUtil {
             LOGGER.finer("Send " + msgType + " message to " + url);
             long start = System.currentTimeMillis();
             HttpResponse response = client.execute(msgType);
-            LOGGER.info("Time to get response: " + (System.currentTimeMillis() - start));
+            LOGGER.info("Time to get response value: " + (System.currentTimeMillis() - start));
             if (response.getStatusLine().getStatusCode() != 200) {
                 LOGGER.warning("HTTP response is: " + response.getStatusLine().getStatusCode());
             }
@@ -78,7 +78,7 @@ public class HttpUtil {
             LOGGER.finer("Send GET message to " + url);
             long start = System.currentTimeMillis();
             HttpResponse response = client.execute(getMsg);
-            LOGGER.info("Time to get response: " + (System.currentTimeMillis() - start));
+            LOGGER.info("Time to get response value: " + (System.currentTimeMillis() - start));
             int sc = response.getStatusLine().getStatusCode();
             if (sc != 200) {
                 LOGGER.severe("Get request failed with status code " + sc);

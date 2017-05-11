@@ -25,7 +25,7 @@ public class SQLiteUtil {
             Connection conn = ds.getConnection();
             Statement st = conn.createStatement();
             st.execute("CREATE TABLE IF NOT EXISTS Logs (ID INTEGER PRIMARY KEY ASC, NODE INTEGER, CLASS CHAR , METHOD CHAR, " +
-                    "TIME TEXT, MESSAGE CHAR, LEVEL CHAR);");
+                    "TIME TEXT, MESSAGE CHAR, VALUE INTEGER, LEVEL CHAR);");
             st.close();
             connection = conn;
             dataSource = ds;
