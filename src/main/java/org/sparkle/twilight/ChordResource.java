@@ -12,6 +12,7 @@ import javax.ws.rs.core.Response;
 import java.net.URI;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Logger;
 
 /**
  * Root resource
@@ -30,8 +31,10 @@ public class ChordResource {
     private static Node n;
     private final JSONParser parser = new JSONParser();
     private final int lookupListSize = 5;
+    private static final Logger LOGGER = Logger.getLogger(ChordResource.class.getName());
 
     public ChordResource() {
+        LoggerHandlers.addHandlers(LOGGER);
         if (Main.ENTRY_POINT == null) {
             this.n = new Node();
         } else {
@@ -165,33 +168,38 @@ public class ChordResource {
             int hops = Integer.parseInt(jRequest.get(JSONFormat.HOPS).toString());
             String address = jRequest.get(JSONFormat.ADDRESS).toString();
             boolean showInConsole = Boolean.parseBoolean(jRequest.get(JSONFormat.SHOWINCONSOLE).toString());
-            if (n.isInNetwork()) {
-                if (showInConsole) {
-                    while (n.getAddresses().size() > lookupListSize) {
-                        n.getAddresses().remove(n.getAddresses().size() - 1);
-                    }
-                    n.getAddresses().add(0, "The address responsible for key: " + key + " is: " + address + " (took " + hops + " hops)");
-                }
-                n.updateFingerTable(key, address);
-
-                Map<Integer, Instruction> instMap = n.getInstructionMap();
-                Instruction inst = instMap.get(key);
-                if (inst != null) {
-                    instMap.remove(key);
-                    Runnable execThread = () -> n.executeInstruction(inst, address);
-                    new Thread(execThread).start();
-                }
-
-            } else {
-                Runnable joinThread = () -> n.joinRing(address);
-                new Thread(joinThread).start();
-            }
-
+            Runnable handleThread = () -> handleReceive(showInConsole, address, key, hops);
+            new Thread(handleThread).start();
         } catch (ParseException e) {
             e.printStackTrace();
             return Response.status(400).build(); //Code 400: Bad Request due to malformed JSON
         }
         return Response.ok().build();
+    }
+
+    private void handleReceive(boolean showInConsole, String address, int key, int hops) {
+        LOGGER.info("hops to " + address + " value: " + hops);
+        if (n.isInNetwork()) {
+            if (showInConsole) {
+                while (n.getAddresses().size() > lookupListSize) {
+                    n.getAddresses().remove(n.getAddresses().size() - 1);
+                }
+                n.getAddresses().add(0, "The address responsible for key: " + key + " is: " + address + " (took " + hops + " hops)");
+            }
+            n.updateFingerTable(key, address);
+
+            Map<Integer, Instruction> instMap = n.getInstructionMap();
+            Instruction inst = instMap.get(key);
+            if (inst != null) {
+                instMap.remove(key);
+                Runnable execThread = () -> n.executeInstruction(inst, address);
+                new Thread(execThread).start();
+            }
+
+        } else {
+            Runnable joinThread = () -> n.joinRing(address);
+            new Thread(joinThread).start();
+        }
     }
 
     @Path("database/{key}")
