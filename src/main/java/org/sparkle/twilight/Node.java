@@ -284,6 +284,7 @@ public class Node {
         // Find predecessor and set its Successor to this node's Successor
         updateNeighbor(JSONFormat.SUCCESSOR, getSuccessor(), getPredecessor() + ChordResource.SUCCESSORPATH);
         // and set pred of succ to this node's pred
+        updateNeighbor(JSONFormat.PREDECESSOR, getPredecessor(), getSuccessor() + ChordResource.PREDECESSORPATH);
         storage.shutdown();
         Main.server.shutdownNow();
         System.exit(0);
