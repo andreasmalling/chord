@@ -203,6 +203,17 @@ public class Node {
                 }
             }
         }
+
+        String freshSucc = tempSuccList.get(0);
+        if (!getSuccessor().equals(freshSucc)) {
+            //update succ.pred
+            updateNeighbor(JSONFormat.PREDECESSOR, this.address, freshSucc + ChordResource.PREDECESSORPATH);
+        }
+        //set new succlist
+        if (!successorList.equals(tempSuccList)) {
+            successorList = tempSuccList;
+        }
+
         //TODO - should replicate responsible topics to successors
         if (updated) {
             JSONArray topicsToSuccs = new JSONArray();
@@ -220,15 +231,6 @@ public class Node {
                     upsertSuccessorList();
                 }
             }
-        }
-        String freshSucc = tempSuccList.get(0);
-        if (!getSuccessor().equals(freshSucc)) {
-            //update succ.pred
-            updateNeighbor(JSONFormat.PREDECESSOR, this.address, freshSucc + ChordResource.PREDECESSORPATH);
-        }
-        //set new succlist
-        if (!successorList.equals(tempSuccList)) {
-            successorList = tempSuccList;
         }
     }
 
@@ -284,6 +286,7 @@ public class Node {
         // Find predecessor and set its Successor to this node's Successor
         updateNeighbor(JSONFormat.SUCCESSOR, getSuccessor(), getPredecessor() + ChordResource.SUCCESSORPATH);
         // and set pred of succ to this node's pred
+        updateNeighbor(JSONFormat.PREDECESSOR, getPredecessor(), getSuccessor() + ChordResource.PREDECESSORPATH);
         storage.shutdown();
         Main.server.shutdownNow();
         System.exit(0);
